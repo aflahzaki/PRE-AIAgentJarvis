@@ -1,0 +1,137 @@
+# 🚀 QUICK START - J.A.R.V.I.S Interactive Chatbot Mode
+
+## 1️⃣ Install (Jika Belum)
+
+```bash
+cd C:\Users\aflah\Downloads\agentPremium\J.A.R.V.I.S_system
+pip install -r requirements.txt
+```
+
+## 2️⃣ Jalankan Program
+
+```bash
+python jarvis_coder.py
+```
+
+Atau dengan diagnostic helper:
+```bash
+python run_jarvis.py
+```
+
+## 3️⃣ Lihat Welcome Screen
+
+```
+======================================================================
+J.A.R.V.I.S AUTONOMOUS SELF-HEALING CODING AGENT v2.0
+Interactive Mode - Chatbot dengan AI Agent Capabilities
+======================================================================
+
+📝 Commands:
+  • Type anything to chat or give instructions
+  • Examples: 'halo', 'perbaiki test.py', 'buat file baru', etc
+  • 'help' - Show available commands
+  • 'tools' - Show available tools
+  • 'clear' - Clear screen
+  • 'exit' or 'quit' - Exit program
+
+----------------------------------------------------------------------
+
+📌 You:
+```
+
+## 4️⃣ Start Chatting!
+
+### Coba ini pertama kali:
+
+```
+📌 You: halo
+🤖 J.A.R.V.I.S: Halo! Saya J.A.R.V.I.S, AI Agent yang siap membantu...
+
+📌 You: help
+[Display help menu dengan contoh perintah]
+
+📌 You: buat file test.py dengan isi "print('hello')"
+🤖 J.A.R.V.I.S: [Create file and confirm]
+
+📌 You: jalankan test.py
+🤖 J.A.R.V.I.S: [Execute and show output]
+hello
+[EXIT CODE: 0] ✓
+
+📌 You: exit
+👋 Goodbye! J.A.R.V.I.S signing off...
+```
+
+## 📋 Perintah Populer
+
+| Input | Apa yang terjadi |
+|-------|-----------------|
+| `halo` | Sapa J.A.R.V.I.S (casual) |
+| `help` | Lihat semua contoh perintah |
+| `tools` | Lihat daftar tools tersedia |
+| `baca file.py` | Baca isi file |
+| `perbaiki file.py` | Auto-fix bugs di file |
+| `jalankan file.py` | Execute script Python |
+| `buat file.py` | Buat file baru |
+| `list files` | Lihat semua file di folder |
+| `clear` | Clear screen |
+| `exit` | Keluar program |
+
+## 🔄 Loop Interaktif
+
+Program akan terus loop sampai Anda ketik `exit`:
+
+```
+Program start
+    ↓
+Welcome & instructions
+    ↓
+Input loop:
+  1. Tunggu user input
+  2. Proses dengan agent
+  3. Tampilkan output
+  4. Loop ke step 1
+    ↓
+User ketik 'exit'
+    ↓
+Program stop
+```
+
+## ✨ Key Features
+
+✅ **Persistent Session** - Program tidak tutup setelah satu perintah  
+✅ **Casual Chat** - Bisa disapa "halo", "hai", dll  
+✅ **Tool Access** - Full AI agent tools untuk file & code execution  
+✅ **Self-Healing** - Auto-fix jika ada error saat eksekusi  
+✅ **Minimal Output** - Ringkas dan fokus pada hasil  
+
+## 🆘 Troubleshooting
+
+### Q: Program tidak merespons
+**A:** Tunggu 5-10 detik (API processing). Jika tetap, Ctrl+C dan restart.
+
+### Q: Error "API key invalid"
+**A:** Check API key di jarvis_coder.py line 14. Restart program.
+
+### Q: Tidak muncul prompt input
+**A:** Program mungkin stuck. Ctrl+C dan jalankan ulang.
+
+### Q: File tidak ditemukan
+**A:** Pastikan file ada di working directory. Gunakan `tools` untuk list files.
+
+## 📖 Full Documentation
+
+- `INTERACTIVE_MODE_GUIDE.md` - Full guide dengan contoh
+- `README_JARVIS.md` - Technical documentation
+- `SETUP_INSTRUCTIONS.md` - Setup & configuration
+
+## 🎯 Next Steps
+
+1. ✅ Run program: `python jarvis_coder.py`
+2. ✅ Type `halo` sebagai test
+3. ✅ Type `help` untuk lihat semua perintah
+4. ✅ Mulai kasih instruksi ke J.A.R.V.I.S!
+
+---
+
+**Happy chatting! 🤖**
