@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budi Mebel - Kontraktor & Supplier Premium</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Animated Background */
+        @keyframes floatingGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatingShapes {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); opacity: 0.1; }
+            33% { transform: translate(30px, -40px) rotate(120deg); opacity: 0.15; }
+            66% { transform: translate(-30px, 40px) rotate(240deg); opacity: 0.1; }
+        }
+
+        @keyframes slowPulse {
+            0%, 100% { opacity: 0.15; }
+            50% { opacity: 0.25; }
+        }
+
+        @keyframes zoomBg {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(217, 119, 6, 0.3), 0 0 40px rgba(217, 119, 6, 0.1); }
+            50% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.5), 0 0 60px rgba(217, 119, 6, 0.2); }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background Layers */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #1e293b 0%, #0f172a 25%, #1e3a8a 50%, #1e293b 75%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: floatingGradient 20s ease infinite;
+            z-index: 0;
+        }
+
+        .animated-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(217, 119, 6, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(217, 119, 6, 0.05) 0%, transparent 50%);
+            animation: slowPulse 8s ease-in-out infinite;
+        }
+
+        .animated-bg::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 100px 100px, rgba(217, 119, 6, 0.1), transparent 100px),
+                radial-gradient(circle at 300px 400px, rgba(59, 130, 246, 0.1), transparent 120px),
+                radial-gradient(circle at 500px 200px, rgba(217, 119, 6, 0.08), transparent 140px);
+            animation: floatingShapes 25s ease-in-out infinite;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.8) !important;
+            border-bottom: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        /* Hero Section */
+        .hero-bg {
+            animation: zoomBg 25s infinite alternate ease-in-out;
+        }
+
+        /* Cards with Glassmorphism */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(217, 119, 6, 0.5);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(217, 119, 6, 0.2);
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #d97706 0%, #fbbf24 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s infinite;
+            background-size: 200% 200%;
+        }
+
+        /* Service Icons */
+        .icon-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.3), rgba(251, 191, 36, 0.2));
+            border: 1px solid rgba(217, 119, 6, 0.3);
+            font-size: 32px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover .icon-box {
+            transform: scale(1.1) rotateY(10deg);
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.5), rgba(251, 191, 36, 0.4));
+            border-color: rgba(217, 119, 6, 0.6);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* Section Backgrounds */
+        .section-light {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Button Styles */
+        .btn-premium {
+            background: linear-gradient(135deg, #d97706, #fbbf24);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .btn-premium::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-premium:hover::before {
+            left: 100%;
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(217, 119, 6, 0.4);
+        }
+
+        /* Image Gallery */
+        .gallery-img {
+            overflow: hidden;
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .gallery-img::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+        }
+
+        .gallery-img:hover::before {
+            opacity: 1;
+        }
+
+        .gallery-img img {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: brightness(0.9);
+        }
+
+        .gallery-img:hover img {
+            transform: scale(1.1) rotate(1deg);
+            filter: brightness(1.1);
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        /* Scroll Animations */
+        .fade-in {
+            animation: slideInLeft 0.8s ease-out;
+        }
+
+        .fade-in-right {
+            animation: slideInRight 0.8s ease-out;
+        }
+
+        .scale-in {
+            animation: scaleIn 0.6s ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .gradient-text {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+    
+    <div class="content">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 transition-all duration-300" style="backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid rgba(217, 119, 6, 0.2);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-3 group cursor-pointer">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg">
+                        <span class="text-white font-bold text-xl">BM</span>
+                    </div>
+                    <span class="font-bold text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">BUDI MEBEL</span>
+                </div>
+                <div class="hidden md:flex space-x-1">
+                    <a href="#tentang" class="px-4 py-2 text-slate-300 hover:text-amber-400 font-medium transition-all duration-300 relative group">
+                        Tentang
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="#layanan" class="px-4 py-2 text-slate-300 hover:text-amber-400 font-medium transition-all duration-300 relative group">
+                        Layanan
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="#portofolio" class="px-4 py-2 text-slate-300 hover:text-amber-400 font-medium transition-all duration-300 relative group">
+                        Portofolio
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                </div>
+                <a href="https://wa.me/6281262568888" target="_blank" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transition-all duration-300 transform hover:scale-105">
+                    Hubungi
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative w-full h-screen overflow-hidden flex items-center justify-center">
+        <!-- Background Image -->
+        <div class="absolute inset-0 hero-bg bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1920&q=80');"></div>
+        
+        <!-- Gradient Overlays -->
+        <div class="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-900/50 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
+        
+        <!-- Animated Elements -->
+        <div class="absolute top-20 left-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div class="absolute bottom-20 right-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+        
+        <!-- Content -->
+        <div class="relative z-10 text-center px-4 max-w-5xl mx-auto">
+            <div data-aos="zoom-in" data-aos-duration="1500" class="mb-8">
+                <span class="inline-block px-6 py-2 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-300 text-sm font-semibold backdrop-blur-sm mb-6">Premium Construction & Supply</span>
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight drop-shadow-2xl" data-aos="fade-up" data-aos-delay="100">
+                Membangun Impian,<br>
+                <span class="gradient-text">Menciptakan Mahakarya</span>
+            </h1>
+            
+            <p class="text-lg md:text-2xl text-slate-200 mb-10 font-light drop-shadow-lg max-w-3xl mx-auto leading-relaxed" data-aos="fade-up" data-aos-delay="200">
+                Kontraktor & Supplier Terpercaya yang Telah Melayani Perusahaan Kelas Korporat dengan Dedikasi Tinggi
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center" data-aos="fade-up" data-aos-delay="300">
+                <a href="https://wa.me/6281262568888" target="_blank" class="btn-premium inline-block text-white font-bold py-4 px-10 rounded-xl shadow-2xl text-lg">
+                    <i class="fab fa-whatsapp mr-2"></i> Konsultasi Proyek (WhatsApp)
+                </a>
+                <a href="#layanan" class="px-10 py-4 border-2 border-amber-500 text-amber-400 font-bold rounded-xl hover:bg-amber-500/20 transition-all duration-300 text-lg">
+                    Lihat Layanan Kami
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="tentang" class="relative py-32 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-slate-900/0 via-amber-500/5 to-slate-900/0"></div>
+        
+        <div class="max-w-5xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                    Reputasi <span class="gradient-text">Skala Korporat</span>
+                </h2>
+                <div class="flex items-center justify-center gap-4 my-6">
+                    <div class="h-1 w-12 bg-gradient-to-r from-amber-500 to-amber-400 rounded-full"></div>
+                    <div class="h-1 w-24 bg-gradient-to-r from-amber-500 to-transparent rounded-full"></div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-8 md:p-12 rounded-2xl" data-aos="zoom-in-up">
+                <p class="text-lg md:text-xl text-slate-300 leading-relaxed mb-8">
+                    Dengan dedikasi tinggi terhadap kualitas, <span class="text-amber-400 font-bold">Budi Mebel</span> tidak hanya melayani pembuatan interior modern, tetapi juga dipercaya sebagai vendor berskala korporat. Kami adalah mitra resmi pemindahan aset vital perusahaan finansial seperti <span class="text-amber-400 font-semibold">FIFGroup</span>. 
+                </p>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="flex flex-col items-center text-center p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                        <div class="text-4xl mb-3">🔒</div>
+                        <h3 class="text-amber-400 font-bold mb-2">Keamanan Terjamin</h3>
+                        <p class="text-slate-400 text-sm">Standar keamanan kelas dunia untuk setiap proyek</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                        <div class="text-4xl mb-3">⏰</div>
+                        <h3 class="text-amber-400 font-bold mb-2">Tepat Waktu</h3>
+                        <p class="text-slate-400 text-sm">Komitmen penuh terhadap deadline proyek</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                        <div class="text-4xl mb-3">✨</div>
+                        <h3 class="text-amber-400 font-bold mb-2">Estetika Premium</h3>
+                        <p class="text-slate-400 text-sm">Desain memukau dengan perhatian detail maksimal</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="layanan" class="relative py-32 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-slate-900/0 via-blue-500/5 to-slate-900/0"></div>
+        
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-20" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                    Layanan <span class="gradient-text">Unggulan Kami</span>
+                </h2>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+                    Solusi komprehensif untuk segala kebutuhan konstruksi, interior, dan supplier kelas premium Anda
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Service 1 -->
+                <div class="glass-card p-8 rounded-2xl group cursor-pointer" data-aos="fade-up" data-aos-delay="100">
+                    <div class="icon-box mb-6 group-hover:animate-spin" style="animation-duration: 0.8s;">
+                        <span>✨</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4 group-hover:text-amber-400 transition-colors">Interior HPL & Kitchen Set</h3>
+                    <p class="text-slate-400 leading-relaxed mb-4">Pengerjaan interior modern, fungsional, dan mewah menggunakan material HPL terbaik dengan finishing sempurna.</p>
+                    <div class="flex items-center text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Pelajari lebih lanjut</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+                
+                <!-- Service 2 -->
+                <div class="glass-card p-8 rounded-2xl group cursor-pointer" data-aos="fade-up" data-aos-delay="200">
+                    <div class="icon-box mb-6 group-hover:animate-spin" style="animation-duration: 0.8s;">
+                        <span>🏛️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4 group-hover:text-amber-400 transition-colors">Eksterior GRC & Relif</h3>
+                    <p class="text-slate-400 leading-relaxed mb-4">Pembuatan ornamen fasad, relif cetak, dan resin untuk memperindah tampilan luar bangunan Anda.</p>
+                    <div class="flex items-center text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Pelajari lebih lanjut</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+
+                <!-- Service 3 -->
+                <div class="glass-card p-8 rounded-2xl group cursor-pointer" data-aos="fade-up" data-aos-delay="300">
+                    <div class="icon-box mb-6 group-hover:animate-spin" style="animation-duration: 0.8s;">
+                        <span>🛡️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4 group-hover:text-amber-400 transition-colors">Relokasi Brankas Korporat</h3>
+                    <p class="text-slate-400 leading-relaxed mb-4">Vendor terpercaya pemindahan brankas berat antar kota dengan keamanan dan profesionalisme terjamin 100%.</p>
+                    <div class="flex items-center text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Pelajari lebih lanjut</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+
+                <!-- Service 4 -->
+                <div class="glass-card p-8 rounded-2xl group cursor-pointer" data-aos="fade-up" data-aos-delay="400">
+                    <div class="icon-box mb-6 group-hover:animate-spin" style="animation-duration: 0.8s;">
+                        <span>🏗️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4 group-hover:text-amber-400 transition-colors">Real Estate Development</h3>
+                    <p class="text-slate-400 leading-relaxed mb-4">Pembangunan hunian dari nol hingga siap huni dengan standar konstruksi internasional dan quality control ketat.</p>
+                    <div class="flex items-center text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Pelajari lebih lanjut</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portofolio" class="relative py-32 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-slate-900/0 via-amber-500/5 to-slate-900/0"></div>
+        
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-20" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                    Galeri <span class="gradient-text">Proyek Premium</span>
+                </h2>
+                <div class="flex items-center justify-center gap-4 my-6">
+                    <div class="h-1 w-12 bg-gradient-to-r from-amber-500 to-amber-400 rounded-full"></div>
+                    <div class="h-1 w-24 bg-gradient-to-r from-amber-500 to-transparent rounded-full"></div>
+                </div>
+                <p class="text-slate-400 text-lg">Portofolio karya kami yang telah mengubah berbagai proyek menjadi mahakarya</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Portfolio Item 1 -->
+                <div class="gallery-img rounded-2xl shadow-2xl overflow-hidden group" data-aos="zoom-in-up" data-aos-delay="100">
+                    <div class="relative overflow-hidden h-80 bg-slate-800">
+                        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" alt="Proyek Interior HPL" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-start p-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-white mb-2">Interior HPL Modern</h3>
+                                <p class="text-amber-300 text-sm">Desain minimalis dengan finishing premium</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Portfolio Item 2 -->
+                <div class="gallery-img rounded-2xl shadow-2xl overflow-hidden group" data-aos="zoom-in-up" data-aos-delay="200">
+                    <div class="relative overflow-hidden h-80 bg-slate-800">
+                        <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80" alt="Proyek Eksterior GRC" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-start p-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-white mb-2">Eksterior GRC Elegan</h3>
+                                <p class="text-amber-300 text-sm">Ornamen fasad dengan presisi tinggi</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Portfolio Item 3 -->
+                <div class="gallery-img rounded-2xl shadow-2xl overflow-hidden group" data-aos="zoom-in-up" data-aos-delay="300">
+                    <div class="relative overflow-hidden h-80 bg-slate-800">
+                        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" alt="Proyek Real Estate" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-start p-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-white mb-2">Real Estate Premium</h3>
+                                <p class="text-amber-300 text-sm">Pembangunan hunian berkualitas tinggi</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-12" data-aos="fade-up">
+                <a href="https://wa.me/6281262568888" target="_blank" class="btn-premium inline-block text-white font-bold py-4 px-10 rounded-xl shadow-2xl text-lg">
+                    <i class="fas fa-eye mr-2"></i> Lihat Lebih Banyak Portofolio
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative py-20 border-t" style="border-color: rgba(217, 119, 6, 0.2); background: rgba(15, 23, 42, 0.9);">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <!-- Brand -->
+                <div class="col-span-1 md:col-span-1" data-aos="fade-up">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                            <span class="text-white font-bold">BM</span>
+                        </div>
+                        <span class="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">BUDI MEBEL</span>
+                    </div>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Kontraktor & Supplier terpercaya mitra korporat Indonesia
+                    </p>
+                </div>
+                
+                <!-- Quick Links -->
+                <div data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="text-white font-bold mb-4">Navigasi</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#tentang" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Tentang Kami</a></li>
+                        <li><a href="#layanan" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Layanan</a></li>
+                        <li><a href="#portofolio" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Portofolio</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Blog</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Services -->
+                <div data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="text-white font-bold mb-4">Layanan</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Interior HPL</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Eksterior GRC</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Real Estate</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-amber-400 transition-colors text-sm">Relokasi Brankas</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact -->
+                <div data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="text-white font-bold mb-4">Hubungi Kami</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-phone text-amber-400 mt-1"></i>
+                            <div>
+                                <p class="text-slate-400 text-sm">WhatsApp</p>
+                                <a href="https://wa.me/6281262568888" class="text-amber-400 font-semibold hover:text-amber-300">0812-6256-8888</a>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-envelope text-amber-400 mt-1"></i>
+                            <div>
+                                <p class="text-slate-400 text-sm">Email</p>
+                                <a href="mailto:muliabudi82@gmail.com" class="text-amber-400 font-semibold hover:text-amber-300">muliabudi82@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Divider -->
+            <div class="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-8"></div>
+            
+            <!-- Bottom Footer -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <p class="text-slate-500 text-sm text-center md:text-left">
+                    &copy; 2026 Budi Mebel - Kontraktor & Supplier. Semua hak dilindungi.
+                </p>
+                <div class="flex gap-4">
+                    <a href="#" class="w-10 h-10 rounded-full bg-amber-500/20 hover:bg-amber-500/40 flex items-center justify-center text-amber-400 transition-all duration-300">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 rounded-full bg-amber-500/20 hover:bg-amber-500/40 flex items-center justify-center text-amber-400 transition-all duration-300">
+                        <i class="fab fa-tiktok"></i>
+                    </a>
+                    <a href="https://wa.me/6281262568888" class="w-10 h-10 rounded-full bg-amber-500/20 hover:bg-amber-500/40 flex items-center justify-center text-amber-400 transition-all duration-300">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    </div> <!-- End of content wrapper -->
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 1000,
+            once: true,
+            offset: 100
+        });
+
+        // Smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Add scroll animation for nav
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.style.background = 'rgba(15, 23, 42, 0.95)';
+            } else {
+                nav.style.background = 'rgba(15, 23, 42, 0.8)';
+            }
+        });
+    </script>
+</body>
+</html>
