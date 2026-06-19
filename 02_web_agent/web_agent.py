@@ -2,7 +2,7 @@ import os
 from groq import Groq
 
 # Menggabungkan API Key Groq langsung ke dalam environment code
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = "APIKEYGROQ"
 
 client = Groq()
 
