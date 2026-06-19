@@ -1,0 +1,13 @@
+1.5. RENCANA KEGIATAN
+
+1.5. Rencana Kegiatan
+
+Penelitian ini disusun secara sistematis melalui beberapa tahapan utama untuk menjamin validitas hasil pemodelan. Rencana kegiatan ini bertujuan untuk memberikan gambaran yang jelas tentang langkah-langkah yang akan diambil dalam penelitian ini.
+
+1. Kajian Pustaka: Pencarian, penelaahan, dan sintesis literatur ilmiah yang berkaitan dengan parameter kualitas air, teori dasar algoritma Natural Gradient Boosting (NGBoost), serta framework Counterfactual Explanations menggunakan DiCE akan dilakukan. Literatur ilmiah yang dipilih akan berasal dari jurnal terindeks yang relevan dengan topik penelitian ini. Kajian pustaka ini bertujuan untuk memahami konsep-konsep dasar yang terkait dengan penelitian ini dan untuk mengidentifikasi gap penelitian yang dapat diisi.
+
+2. Cara Pengumpulan Data: Metode pengumpulan data yang digunakan dalam penelitian ini adalah pendekatan kuantitatif melalui pemanfaatan data sekunder berupa dataset parameter fisik dan kimia air yang diperoleh dari platform publik Kaggle. Data yang dikumpulkan mencakup fitur-fitur seperti pH, turbiditas, klorin, dan padatan terlarut. Dataset ini dipilih karena relevansinya dengan parameter kualitas air yang ingin diprediksi.
+
+3. Rancangan Penelitian & Perancangan Sistem: Prosedur penelitian ini mencakup beberapa tahap, yaitu pra-proses data (data preprocessing), pembagian data (data splitting), pelatihan model prediktif menggunakan NGBoost, integrasi Explainable AI (XAI), dan perancangan alur generasi penyesuaian fitur menggunakan Counterfactual Explanations (DiCE). Pada tahap pra-proses data, data akan dibersihkan dan diolah untuk memastikan bahwa data tersebut siap untuk digunakan dalam model prediktif. Kemudian, data akan dibagi menjadi dua bagian, yaitu data pelatihan dan data pengujian. Model prediktif NGBoost akan dilatih menggunakan data pelatihan dan diuji menggunakan data pengujian. Setelah itu, Explainable AI (XAI) akan diintegrasikan untuk memberikan penjelasan tentang hasil prediksi. Terakhir, alur generasi penyesuaian fitur menggunakan Counterfactual Explanations (DiCE) akan dirancang untuk memberikan rekomendasi preskriptif.
+
+4. Cara Menguji Hasil Penelitian: Performa model prediktif akan dievaluasi menggunakan metrik seperti akurasi, precision, recall, dan F1-score. Hasil rekomendasi preskriptif dari DiCE akan diinterpretasikan, ditafsirkan, dan ditarik kesimpulannya untuk mendukung keputusan operasional kelayakan air. Evaluasi ini bertujuan untuk memastikan bahwa model prediktif yang dikembangkan dapat memberikan hasil yang akurat dan dapat diandalkan. Selain itu, rekomendasi preskriptif dari DiCE akan membantu dalam pengambilan keputusan operasional kelayakan air.

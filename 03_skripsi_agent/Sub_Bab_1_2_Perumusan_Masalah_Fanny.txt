@@ -1,0 +1,8 @@
+## 1.2. PERUMUSAN MASALAH
+
+Penyakit stroke merupakan salah satu krisis kesehatan global yang mematikan dan menjadi penyebab utama kecacatan jangka panjang. Dalam upaya mengatasi masalah ini, penggunaan Machine Learning (ML) telah terbukti menjadi instrumen prediktif yang kuat dalam membantu praktisi medis mengidentifikasi pola tersembunyi dari data historis pasien. Namun, implementasi komputasi prediktif pada ranah klinis dihadapkan pada dua masalah fundamental, yaitu ketidakseimbangan distribusi kelas data (class imbalance) dan fenomena "kotak hitam" (black-box) pada model komputasi tingkat lanjut. Ketidakseimbangan kelas data menyebabkan algoritma standar menghasilkan model bias, sedangkan fenomena black-box membuat praktisi medis kesulitan memahami justifikasi prediksi.
+
+Dalam konteks ini, penelitian ini bertujuan untuk mengatasi ketidakseimbangan kelas data dan fenomena black-box pada model komputasi tingkat lanjut. Berikut adalah perumusan masalah yang akan dijawab dalam penelitian ini:
+1. Bagaimana cara mengatasi ketidakseimbangan kelas data secara efektif dalam memprediksi risiko stroke, sehingga model yang dihasilkan tidak bias dan dapat mendeteksi ancaman stroke yang sebenarnya?
+2. Apakah arsitektur Stacking Ensemble Learning (Trio-Boosting) yang mengintegrasikan XGBoost, LightGBM, dan CatBoost dapat meningkatkan performa prediksi risiko stroke dibandingkan dengan model tunggal, dan seberapa besar perbedaan performa antara keduanya?
+3. Bagaimana metode SHapley Additive exPlanations (SHAP) dapat membongkar black-box model untuk memberikan interpretasi fitur klinis yang valid dan dapat dipahami oleh praktisi medis, sehingga dapat meningkatkan kepercayaan dan adopsi model prediksi risiko stroke dalam praktik medis?

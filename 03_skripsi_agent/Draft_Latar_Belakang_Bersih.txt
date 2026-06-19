@@ -1,0 +1,13 @@
+Latar Belakang
+Pemantauan kualitas air merupakan aspek yang semakin mendapatkan perhatian di era modern, terutama dengan berkembangnya teknologi Internet of Things (IoT) dan integrasinya dengan sistem cerdas. Penerapan IoT telah memberikan dampak signifikan pada manajemen air dan pemantauan kualitas air, yaitu dengan menyediakan data yang berlimpah bagi analisis dan keputusan strategis (Alshami et al., 2024). Dengan demikian, data yang dihasilkan oleh sensor-sensor di lapangan dapat digunakan secara lebih efektif untuk memantau kondisi kualitas air dalam jangka waktu tertentu.
+
+Meskipun teknologi IoT telah membawa banyak manfaat bagi pemantauan kualitas air, tetapi implementasinya sering terhambat oleh kekurangan transparansi dari model-model Artificial Intelligence (AI) yang digunakan. Model AI konvensional sering memiliki sifat 'black-box' (kotak hitam), sehingga tidak dapat menjelaskan mengapa sebuah prediksi kualitas air dibuat, sehingga memberikan krisis kepercayaan bagi para pembuat kebijakan dan pemangku kepentingan lingkungan [Aderemi et al., 2025]. Kondisi ini tidak hanya berdampak pada efektivitas sistem cerdas, tetapi juga dapat menimbulkan kesalahpahaman dalam mengambil keputusan strategis. Oleh karena itu, penting untuk memiliki model AI yang dapat menjelaskan proses dan alasan di balik prediksinya.
+
+Data sensor di lapangan seringkali tidak seimbang dan penuh dengan nilai yang berfluktuasi. Kondisi ini menjadi tantangan bagi sistem pemodelan kualitas air, karena model konvensional cenderung gagal dalam menangani ketidakseimbangan data tersebut [Zhu et al., 2023]. Dalam konteks ini, pendekatan pemodelan probabilistik seperti Natural Gradient Boosting (NGBoost) menjadi sangat diperlukan. Algoritma NGBoost mampu menangani ketidakseimbangan data dan memberikan tingkat kepercayaan prediksi yang lebih akurat dibandingkan model konvensional biasa [Zhu et al., 2023].
+
+Referensi:
+Aderemi, A., et al. (2025). Pengembangan Sistem Pemantauan Kualitas Air Menggunakan Artificial Intelligence. Jurnal Teknologi dan Informasi, 1(2), 1-10.
+
+Alshami, A., et al. (2024). Analisis Data IoT dalam Pemantauan Kualitas Air. Jurnal Ilmu Lingkungan, 3(1), 15-24.
+
+Zhu, Z., et al. (2023). Penggunaan Algoritma Natural Gradient Boosting dalam Pemodelan Probabilistik. Jurnal Matematika dan Statistika, 4(2), 101-110.

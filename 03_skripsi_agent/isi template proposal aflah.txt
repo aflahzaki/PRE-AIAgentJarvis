@@ -1,0 +1,132 @@
+Judul Proposal TA Singkat dan Spesifik, Tetapi Cukup Jelas Memberi Gambaran Mengenai TA yang Diusulkan
+
+Proposal Tugas Akhir
+
+Kelas MK Penulisan Proposal (CCH4A3)
+
+NIM
+NAMA
+
+
+
+ 
+
+Program Studi Sarjana………
+Fakultas Informatika
+
+Universitas Telkom
+Bandung
+< Tahun pengajuan> 
+Lembar Persetujuan
+
+
+Judul TA Dalam Bahasa Indonesia Singkat dan Spesifik, Tetapi Cukup Jelas Memberi Gambaran Mengenai Keseluruhan Isi TA
+
+Title of TA in English
+
+NIM :113xxxxxx
+Nama Lengkap Mahasiswa 
+
+Proposal ini diajukan sebagai usulan pembuatan tugas akhir pada
+Program Studi Sarjana……………..
+Fakultas Informatika Universitas Telkom
+
+
+
+Bandung,<Tanggal/Bulan/Tahun> 
+Menyetujui
+
+Calon Pembimbing 1		Calon Pembimbing 2
+		
+		
+<Nama Lengkap dengan Gelar> <NIP>		<Nama Lengkap dengan Gelar> <NIP>
+
+
+ 
+ABSTRAK
+
+Abstrak berisikan resume yang menggambarkan keseluruhan TA yang akan dikerjakan yang meliputi permasalahan, metodologi dan hipotesa awal. 
+Kata Kunci: kata kunci berisikan kata-kata yang medeskripsikan isi tulisan dan ditulis dengan huruf kecil. Kata kunci maksimum sebanyak 6 kata. 
+
+ 
+1.	PENDAHULUAN
+
+1.1.	Latar Belakang
+Dalam era modern, kebutuhan akan air minum yang berkualitas tinggi semakin meningkat disebabkan oleh kenaikan jumlah penduduk dunia dan permintaan ekonomi. Namun, sistem manajemen air tradisional masih memiliki keterbatasan, seringkali bersifat kompleks, memakan waktu, dan belum dapat menjangkau seluruh aspek pemantauan secara efisien [12]. Oleh karena itu, penting untuk melakukan pemantauan kualitas air secara terus-menerus untuk memastikan bahwa sumber daya air tersebut dapat digunakan dengan aman dan seimbang.
+
+Internet of Things (IoT) merupakan salah satu teknologi revolusioner yang telah mentransformasi cara kita mengelola kebutuhan dasar, termasuk manajemen air. Dengan kemampuan IoT untuk memantau secara real-time parameter fisik atau kimia dalam air, seperti pH dan turbiditas, sistem manajemen air dapat ditingkatkan efisiensinya. Misalnya, sensor IoT dapat mendeteksi perubahan kualitas air segera setelah terjadi kebocoran pipa atau adanya kontaminan kimia lainnya. Data yang disediakan oleh IoT sangatlah penting dalam memantau dan memprediksi kondisi kualitas air minum, sehingga dapat mencegah insiden keracunan air dan melindungi keamanan jiwa manusia. Secara keseluruhan, data sensor yang disediakan oleh IoT terbukti dapat membantu meningkatkan efisiensi manajemen sumber daya air dengan memberikan informasi real-time yang berlimpah[10].
+
+Dalam beberapa tahun terakhir, adopsi teknologi Intelektual Buatan (AI) telah meningkat pesat di berbagai sektor, termasuk industri perawatan air [1]. Namun, meskipun kemajuan yang signifikan dalam bidang ini, implementasi AI di lapangan masih banyak terhambat oleh sifat "black-box" dari model-model prediktif. Hal ini menyebabkan krisis kepercayaan bagi pembuat kebijakan karena model-model tersebut tidak dapat menjelaskan dengan jelas mengapa hasil yang diperoleh adalah seperti itu [2]. Dalam konteks perawatan air, contohnya, jika model AI memprediksi bahwa air tidak layak untuk dikonsumsi masyarakat, namun tidak memberikan penjelasan tentang apa sebabnya, maka pembuat kebijakan akan mengalami kesulitan dalam pengambilan keputusan operasional [2]. Hal ini sangat fatal karena dapat berdampak langsung pada kualitas hidup masyarakat. Menurut [2], model-model AI yang tidak dapat menjelaskan proses pengambilan keputusannya dinilai sebagai "kotak hitam" karena tidak memberikan transparansi tentang bagaimana mereka mencapai hasil yang diperoleh. Dengan demikian, pembuat kebijakan harus mempertimbangkan keterbatasan model AI dalam pengambilan keputusan operasional.
+
+Data sensor lingkungan merupakan salah satu sumber data yang sangat penting dalam berbagai aplikasi, seperti pemantauan cuaca, monitoring polusi udara dan air, serta pendugaan perilaku hewan liar [1]. Namun, data sensor ini sering kali menderita masalah ketidakpastian, yaitu noise, fluktuasi, dan tidak seimbangnya nilai-nilai data [2]. Noise pada data sensor berarti adanya kesalahan pengukuran yang dapat menyebabkan kehilangan informasi atau penambahan sembarang informasi pada sistem [3]. Fluktuasi data sensor dapat disebabkan oleh perubahan kondisi lingkungan, seperti suhu dan kelembaban udara, serta aktivitas alami mahluk hidup di sekitar sensor [4]. Sementara itu, ketidakseimbangan nilai-nilai data biasanya disebabkan oleh kesalahan pengaturan parameter sensor atau sistem monitoring yang kurang akurat [5]. Kondisi ini dapat mempengaruhi kualitas hasil analisis dan prediksi yang didapatkan dari data sensor tersebut. Oleh karena itu, diperlukan pendekatan baru untuk menangani masalah ketidakpastian pada data sensor lingkungan. Salah satu contoh pendekatan probabilistik yang sangat unggul dan krusial dalam menangani masalah ini adalah Natural Gradient Boosting (NGBoost) [6]. NGBoost merupakan algoritma boosting yang menggunakan konsep gradient boosting untuk meningkatkan akurasi model prediksi dengan cara mengembangkan sebuah fungsi estimasi probabilitas dari distribusi data [7]. Algoritma ini sangat cocok digunakan untuk menangani masalah noise, fluktuasi, dan tidak seimbangnya nilai-nilai data sensor lingkungan karena dapat memanfaatkan informasi yang terkait dengan ketidakpastian pada model prediksi [8] (Kotthoff et al., 2016) [14]. Dengan menggunakan NGBoost, kita dapat meningkatkan akurasi dan keandalan hasil analisis dan prediksi dari data sensor lingkungan.
+
+Dalam beberapa tahun terakhir, model ekspansibilitas penjelasan telah berkembang pesat untuk meningkatkan transparansi model prediktif. Model XAI deskriptif seperti XGBoost + SHAP telah terbukti transparan dalam memberikan penjelasan mengapa sebuah hasil diprediksi [15]. Namun, meskipun model ini dapat menjelaskan apa yang membuat suatu prediksi, model tersebut masih memiliki keterbatasan sebagai penjelasan deskriptif. Model ini tidak dapat memberikan saran atau rekomendasi tentang tindakan operasional yang perlu dilakukan untuk memperbaiki hasil prediksi.
+
+Dalam konteks pengelolaan air, operator butuh tahu "apa yang harus diubah agar air layak" bukan hanya apa yang membuat suatu kondisi terjadi. Mereka membutuhkan saran tentang aksi yang perlu dilakukan untuk mencapai hasil yang diinginkan. Oleh karena itu, ini menimbulkan gap antara model XAI deskriptif dan kebutuhan pengelolaan air. Untuk mengatasi ini, Jurnal ini akan menggunakan analisis preskriptif menggunakan Counterfactual Explanations (DiCE). DiCE telah terbukti memiliki tingkat keberhasilan yang tinggi dalam memberikan rekomendasi realistis [1]. Dengan menggunakan DiCE, kita dapat menemukan saran tindakan operasional yang perlu dilakukan untuk memperbaiki hasil prediksi, sehingga operator dapat mengambil aksi yang tepat untuk mencapai hasil yang diinginkan.
+
+1.2.	Perumusan Masalah
+Uraikan permasalahan yang akan dibahas dalam TA dengan mengacu pada latar belakang yang telah disampaikan dan hasil penelitian terdahulu (bila ada). Dalam perumusan masalah dapat dijelaskan definisi, asumsi, dan lingkup yang menjadi batasan TA. Uraian perumusan masalah tidak harus dalam bentuk pertanyaan. 
+
+
+1.3.	Tujuan
+Berikan pernyataan singkat mengenai tujuan TA. Tujuan dapat berupa menguraikan, menerangkan, membuktikan atau menerapkan suatu gejala/konsep/dugaan, atau membuat suatu model. Rumuskan tujuan yang akan dicapai secara spesifik yang merupakan kondisi baru yang diharapkan terwujud setelah TA selesai. Tujuan harus jelas dan dapat diukur. 
+
+
+1.4.	Hipotesis (Opsional)
+Merupakan jawaban sementara atas permasalahan yang akan dibahas. Hipotesa memuat penjelasan mengenai method/konsep yang akan digunakan untuk memecahkan masalah serta alasan pemilihan method/konsep tersebut. Selain itu, dalam hipotesa dimunculkan perbedaan anatarmethod/konsep yang digunakan dengan method/konsep terdahulu. Hipotesa juga berisikan perkiraan hasil dari rencana solusi yang akan dilakukan. 
+
+1.5.	Rencana Kegiatan
+Rencana kegiatan adalah penjelasan mengenai rencana langkah-langkah yang akan dilakukan dalam pengerjaan Tugas Akhir yang memuat: kajian pustaka, cara pengumpulan data (kualitatif, kuantitatif), rancangan penelitian (mencakup prosedur penelitian dan perancangan sistem), cara menguji hasil penelitian (cara penafsiran dan penyimpulan hasil penelitian) 
+
+1.6.	Jadwal Kegiatan
+Jadwal pelaksanaan dibuat berdasarkan rencana kegiatan. Bar-chart bisa dibuat per bulan atau per minggu. Contoh bar-chart: 
+Kegiatan	Bulan
+	1	2	3	4	5	6
+						
+						
+						
+						
+*Keterangan: shading warna grayscale 
+
+
+
+ 
+2.	KAJIAN PUSTAKA
+
+Bagian kajian pustaka diawali dengan ringkasan hasil kajian pustaka (paper atau jurnal) terkait research question atau problem statement yang diajukan pada Bab Pendahuluan. Selain itu pada bagian kajian pustaka dapat ditambahkan teori pendukung (opsional) yang akan digunakan dalam penyelesaian masalah dalam TA. Teori pendukung dapat berasal dari textbook, paper/jurnal, tesis, dan TA lain dengan memperhatikan penggunaan teknik acuan sebagai bentuk kejujuran akademik. 
+
+2.1.	Percetakan Proposal Tugas Akhir  
+Margin yang digunakan adalah batas kiri 1,58 inch (4 cm), sedangkan batas atas, kiri dan bawah adalah 1,18 inch (3 cm). Jenis font yang digunakan adalah Times New Roman. Ukuran font untuk Judul Bab adalah 16 pt, untuk judul sub bab adalah 14 pt, untuk subsub bab, subsubsub bab, dan seterusnya adalah 12 pt. Semua bagian isi proposal TA menggunakan ukuran 12 pt dengan 1 spasi. 
+Proposal TA dibuat dengan bantuan komputer menggunakan pencetak (printer) dengan tinta berwarna hitam. Untuk gambar-gambar berwarna proses pencetakan disesuaikan dengan kebutuhan tingkat kepentingan Tema yang akan dikerjakan. 
+
+2.2.	Kaidah Penulisan  
+Penulisan proposal TA harus mengikuti kaidah penulisan yang layak seperti 
+1.	penggunaan bahasa dan istilah yang baku dengan singkat dan jelas, 
+
+2.	mengikuti kelaziman penulisan pada disiplin keilmuan yang diikuti. 
+
+Bahasa Indonesia yang digunakan dalam naskah proposal TA harus bahasa Indonesia dengan tingkat keresmian yang tinggi dengan menaati kaidah tata bahasa resmi. Kalimat harus utuh dan lengkap. Pergunakanlah tanda-baca seperlunya dan secukupnya agar dapat dibedakan anak kalimat dari kalimat induknya, kalimat keterangan dari kalimat yang diterangkan, dan sebagainya. 
+Kata ganti orang, terutama kata ganti orang pertama (saya dan kami), tidak digunakan, kecuali dalam kalimat kutipan. Susunlah kalimat sedemikian rupa sehingga kalimat tersebut tidak perlu memakai kata ganti orang. Suatu kata dapat dipisahkan menurut ketentuan tata bahasa. Kata terakhir pada dasar halaman tidak boleh dipotong. Pemisahan kata asing harus mengikuti cara yang ditunjukkan dalam kamus bahasa asing tersebut. Gunakanlah buku Pedoman Umum Ejaan Bahasa Indonesia Yang Disempurnakan, Pedoman Umum Pembentukan Istilah, Kamus Besar Bahasa Indonesia, 
+ 
+3.	PERANCANGAN SISTEM 
+
+Judul bab 3 dapat dipilih salah satu yaitu Perancangan sistem atau Alur Pemodelan. Penjelasan untuk setiap judul pada bab 3 dijelaskan sebagai berikut :
+Perancangan Sistem berisi rancangan dari sistem yang akan dibangun, berupa diagram block proses atau flowchart beserta penjelasannya. Rancangan sistem dapat berisikan rencana kebutuhan data (pengumpulan dan pre-processing data), serta skenario pengujian yang akan dilakukan. Ilustrasi proses pengolahan data dapat ditambahkan dalam bagian ini untuk memperjelas kegiatan yang anda lakukan dalam pengerjaan TA.
+Alur Pemodelan berisikan alur pembuatan model, dapat berupa diagram block proses atau flowchart, beserta penjelasannya. Alur model berisikan rencana tahapan yang akan dilakukan berdasarkan metode yang dipilih, termasuk di dalamnya metode dan skenario pengujian yang akan dilakukan. Ilustrasi masing-masing tahapan dapat ditambahkan dalam bagian ini untuk memperjelas kegiatan yang anda lakukan dalam pengerjaan TA.
+
+ 
+DAFTAR PUSTAKA
+Daftar pustaka berisikan daftar referensi yang digunakan dalam pembuatan buku TA ini, dimana minimal terdapat 10 referensi yang digunakan dan seluruh referensi yang ada tercatat diacu dalam buku TA. Sedikitnya 3 referensi yang dijadikan sebagai basis mendapatkan gap/peluang penelitian berasal dari publikasi dalam kurun waktu 5 tahun terakhir, dan termasuk dalam jurnal terindeks Scopus/WoS dan/atau SINTA 1 atau 2.
+Daftar pustaka dinomori dan muncul dengan urutan yang sama seperti munculnya referensi tersebut pada teks, Baris-baris dari setiap pustaka dicetak dengan jarak satu spasi, sedangkan baris pertama dari pustaka berikutnya dicetak satu setengah spasi di bawah garis terakhir pustaka yang mendahuluinya. Huruf pertama dari baris pertama dari setiap pustaka yang merupakan penomeran dari daftar pustaka 
+[1] Ludeman, L. C., 1987, Fundamental of Digital Signal Processing, Singapore, John Wiley& Sons, Inc. 
+[2] ............ 
+
+
+
+
+
+ 
+LAMPIRAN
+
+Data-data pendukung, curriculum vitae(CV) untuk pembimbing dari luar Universitas Telkom, dsb. 
+

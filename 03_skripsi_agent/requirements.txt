@@ -1,0 +1,42 @@
+# ============================================================================
+# BAB 3 METHODOLOGY: NATURAL GRADIENT BOOSTING FOR WATER POTABILITY
+# Requirements untuk implementasi NGBoost pada klasifikasi kualitas air
+# ============================================================================
+
+# Core Data Science Libraries
+numpy>=1.21.0              # Numerical computing
+pandas>=1.3.0              # Data manipulation
+scipy>=1.7.0               # Scientific computing
+
+# Machine Learning & Boosting
+scikit-learn>=0.24.2        # ML algorithms & preprocessing
+xgboost>=1.5.0             # Gradient boosting baseline
+ngboost>=0.4.1             # Natural Gradient Boosting (MAIN)
+
+# Class Imbalance Handling
+imbalanced-learn>=0.8.0     # SMOTE-ENN for resampling
+
+# Visualization
+matplotlib>=3.4.2          # Basic plotting
+seaborn>=0.11.1            # Statistical visualization
+
+# Optional: For Jupyter Notebook
+jupyter>=1.0.0             # Interactive notebooks
+jupyterlab>=3.0.0          # Jupyter Lab interface
+
+# Optional: For Production Deployment
+joblib>=1.0.1              # Model serialization
+# flask>=2.0.0             # REST API (if deploying as service)
+
+# Development
+ipython>=7.25.0            # Enhanced Python shell
+# pytest>=6.2.4            # Unit testing (optional)
+# black>=21.0               # Code formatting (optional)
+
+# ============================================================================
+# Installation:
+# pip install -r requirements.txt
+#
+# For Conda:
+# conda create -n ngboost_env --file requirements.txt
+# ============================================================================

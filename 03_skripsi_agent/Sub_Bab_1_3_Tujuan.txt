@@ -1,0 +1,6 @@
+1.3. TUJUAN PENELITIAN
+
+Dalam konteks penelitian ini, tujuan utama adalah membangun model prediktif kualitas air yang akurat dan transparan menggunakan teknik Machine Learning. Berikut adalah tujuan spesifik penelitian ini:
+* Membangun model prediktif kualitas air yang handal dalam menangani ketidakpastian dan noise pada dataset menggunakan algoritma Natural Gradient Boosting (NGBoost) dengan tingkat akurasi minimal 90%.
+* Mengintegrasikan pendekatan Explainable AI (XAI) untuk menghasilkan model prediktif yang transparan dan proses pengambilan keputusannya dapat diinterpretasikan dengan jelas, sehingga meningkatkan kepercayaan pengguna terhadap hasil prediksi.
+* Menerapkan metode Counterfactual Explanations menggunakan framework DiCE untuk menghasilkan analisis preskriptif berupa rekomendasi tindakan penyesuaian fitur yang realistis untuk memperbaiki kualitas air, dengan tingkat keberhasilan rekomendasi minimal 85%.

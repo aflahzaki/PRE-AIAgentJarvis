@@ -1,0 +1,6 @@
+Perumusan masalah dalam penelitian ini dilatarbelakangi oleh keterbatasan model prediktif yang tidak dapat menjelaskan hasil prediksi dengan jelas, sehingga menimbulkan krisis kepercayaan bagi pembuat kebijakan. Selain itu, data sensor lingkungan yang digunakan dalam pemantauan kualitas air seringkali menderita masalah ketidakpastian, seperti noise, fluktuasi, dan ketidakseimbangan nilai-nilai data. Berdasarkan latar belakang tersebut, beberapa permasalahan yang perlu dipecahkan dalam penelitian ini adalah:
+
+* Bagaimana mengembangkan model prediktif yang dapat menjelaskan hasil prediksi dengan jelas dan transparan dalam konteks pemantauan kualitas air?
+* Bagaimana menangani masalah ketidakpastian pada data sensor lingkungan, seperti noise, fluktuasi, dan ketidakseimbangan nilai-nilai data, untuk meningkatkan akurasi model prediksi?
+* Bagaimana mengintegrasikan teknik penjelasan model (XAI) dengan model prediktif untuk memberikan penjelasan yang jelas dan transparan tentang hasil prediksi?
+* Bagaimana menggunakan Counterfactual Explanations (DiCE) untuk memberikan saran tindakan operasional yang perlu dilakukan untuk memperbaiki hasil prediksi dalam konteks pemantauan kualitas air?
