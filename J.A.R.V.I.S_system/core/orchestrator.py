@@ -96,6 +96,13 @@ class Orchestrator:
     def classify_task(self, user_input: str) -> str:
         """Classify user input into task type for agent routing.
 
+        Uses a score-based approach that also considers the ModelRouter's
+        difficulty classification to avoid disagreement between the two
+        classifiers. For example, 'explain python decorators' should not
+        go to the coder agent just because it mentions 'python' - if the
+        difficulty classifier sees it as a reasoning task, research is
+        more appropriate.
+
         Task types:
         - 'code': Code writing, debugging, file manipulation
         - 'research': Complex analysis, comparison, deep reasoning
@@ -121,15 +128,44 @@ class Orchestrator:
             if re.search(pattern, text, re.IGNORECASE):
                 research_score += 1
 
+        # Consult the difficulty classifier for coherence check.
+        # If difficulty is HARD and research_score > 0, favor research
+        # to avoid sending conceptual questions to the coder agent
+        # just because they mention a programming language.
+        difficulty, _ = self.router.classify_difficulty(user_input)
+
+        if difficulty == Difficulty.HARD and research_score > 0:
+            # HARD + any research signal -> research agent (better reasoning)
+            return "research"
+
+        # Strong code signals: action verbs indicating code manipulation
+        # These patterns indicate the user wants actual code work, not explanation
+        ACTION_CODE_PATTERNS = [
+            r"\b(buat file|create file|write file|tulis file)\b",
+            r"\b(debug|fix bug|perbaiki|traceback)\b",
+            r"\b(execute|run|jalankan|eksekusi)\b",
+            r"\b(edit|modify|ubah|ganti|replace)\b",
+            r"\b(compile|build|deploy)\b",
+            r"\b(install|pip|npm)\b",
+            r"\b(read_file|write_file|list_files)\b",
+        ]
+        strong_code_score = sum(
+            1 for p in ACTION_CODE_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+
         # Routing decision berdasarkan score
-        if code_score > research_score and code_score >= 1:
+        if strong_code_score >= 1:
+            # Strong code action verb present -> definitely code
             return "code"
         elif research_score > code_score and research_score >= 1:
             return "research"
-        elif code_score >= 1:
+        elif code_score > research_score and code_score >= 1:
             return "code"
         elif research_score >= 1:
             return "research"
+        elif code_score >= 1:
+            return "code"
 
         # Default: simple task (direct LLM response)
         return "simple"

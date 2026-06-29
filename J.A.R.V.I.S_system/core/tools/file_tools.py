@@ -4,6 +4,10 @@ File Tools - Pure Python file operations for J.A.R.V.I.S agents.
 Provides read, write, list, and edit (find & replace) capabilities.
 All functions return structured dict results with success/error status.
 No external dependencies required.
+
+Security: All file operations are restricted to the workspace directory
+(configurable via JARVIS_WORKSPACE env var, defaults to current working dir).
+This prevents the LLM from reading/writing system files.
 """
 
 import logging
@@ -12,19 +16,66 @@ from typing import Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
+# Workspace root for path restriction.
+# All file operations are confined to this directory.
+_WORKSPACE_ROOT = os.path.abspath(
+    os.getenv("JARVIS_WORKSPACE", os.getcwd())
+)
+
+
+def _get_workspace_root() -> str:
+    """Get the current workspace root path.
+
+    Returns:
+        Absolute path to the workspace root.
+    """
+    return _WORKSPACE_ROOT
+
+
+def _validate_path(file_path: str) -> tuple:
+    """Validate that a file path is within the allowed workspace.
+
+    Resolves the path to absolute and checks it is under the workspace root.
+    This prevents path traversal attacks (e.g., '../../etc/passwd').
+
+    Args:
+        file_path: The path to validate.
+
+    Returns:
+        Tuple of (is_valid: bool, abs_path: str, error: str or None).
+    """
+    workspace = _get_workspace_root()
+    abs_path = os.path.abspath(file_path)
+
+    # Ensure the resolved path starts with the workspace root
+    # Use os.sep to handle edge case of /workspace vs /workspace2
+    if not (abs_path == workspace or abs_path.startswith(workspace + os.sep)):
+        return (
+            False,
+            abs_path,
+            "Access denied: path '{}' is outside workspace '{}'".format(
+                file_path, workspace
+            ),
+        )
+
+    return (True, abs_path, None)
+
 
 def read_file(file_path: str, encoding: str = "utf-8") -> Dict[str, Union[str, bool]]:
     """Read content from a file.
 
     Args:
-        file_path: Path to the file to read.
+        file_path: Path to the file to read (must be within workspace).
         encoding: File encoding (default: utf-8).
 
     Returns:
         Dict with 'success', 'content' or 'error' keys.
     """
     try:
-        abs_path = os.path.abspath(file_path)
+        is_valid, abs_path, error = _validate_path(file_path)
+        if not is_valid:
+            return {"success": False, "error": error}
+
         if not os.path.exists(abs_path):
             return {
                 "success": False,
@@ -73,7 +124,7 @@ def write_file(
     """Write content to a file.
 
     Args:
-        file_path: Path to the file to write.
+        file_path: Path to the file to write (must be within workspace).
         content: Content to write.
         encoding: File encoding (default: utf-8).
         create_dirs: Whether to create parent directories if they don't exist.
@@ -82,7 +133,9 @@ def write_file(
         Dict with 'success' and 'path' or 'error' keys.
     """
     try:
-        abs_path = os.path.abspath(file_path)
+        is_valid, abs_path, error = _validate_path(file_path)
+        if not is_valid:
+            return {"success": False, "error": error}
 
         # Buat direktori parent jika diperlukan
         if create_dirs:
@@ -119,7 +172,7 @@ def list_files(
     """List files in a directory.
 
     Args:
-        directory: Directory path to list.
+        directory: Directory path to list (must be within workspace).
         pattern: Optional file extension filter (e.g., '.py', '.txt').
         recursive: Whether to list files recursively.
 
@@ -127,7 +180,10 @@ def list_files(
         Dict with 'success', 'files' list or 'error' keys.
     """
     try:
-        abs_dir = os.path.abspath(directory)
+        is_valid, abs_dir, error = _validate_path(directory)
+        if not is_valid:
+            return {"success": False, "error": error}
+
         if not os.path.exists(abs_dir):
             return {
                 "success": False,
@@ -186,7 +242,7 @@ def edit_file(
     """Edit a file by finding and replacing text.
 
     Args:
-        file_path: Path to the file to edit.
+        file_path: Path to the file to edit (must be within workspace).
         find_text: Text to find.
         replace_text: Text to replace with.
         encoding: File encoding (default: utf-8).
@@ -195,7 +251,12 @@ def edit_file(
         Dict with 'success', 'replacements' count or 'error' keys.
     """
     try:
-        # Pertama baca file
+        # Validate path before proceeding
+        is_valid, abs_path, error = _validate_path(file_path)
+        if not is_valid:
+            return {"success": False, "error": error}
+
+        # Pertama baca file (path already validated via _validate_path)
         read_result = read_file(file_path, encoding)
         if not read_result["success"]:
             return read_result
@@ -223,7 +284,7 @@ def edit_file(
 
         return {
             "success": True,
-            "path": os.path.abspath(file_path),
+            "path": abs_path,
             "replacements": count,
         }
 

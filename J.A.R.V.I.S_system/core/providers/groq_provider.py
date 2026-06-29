@@ -57,7 +57,8 @@ class GroqProvider(BaseProvider):
     def is_available(self) -> bool:
         """Check if Groq API is configured and accessible.
 
-        Verifies API key is present and we're not rate limited.
+        Verifies API key is present, looks valid (not a common placeholder
+        or obviously malformed), and we're not rate limited.
         Does NOT make an actual API call to conserve rate limit.
 
         Returns:
@@ -67,6 +68,24 @@ class GroqProvider(BaseProvider):
         if not self.client:
             logger.debug("Groq not available: API key not configured")
             return False
+
+        # Additional validation: reject obviously invalid keys
+        # Groq API keys typically start with 'gsk_' and have reasonable length
+        key = self.api_key.strip()
+        if len(key) < 20:
+            logger.debug("Groq not available: API key too short (likely invalid)")
+            return False
+
+        # Reject common placeholder patterns
+        placeholder_patterns = [
+            "your-", "insert-", "put-", "enter-", "xxx", "placeholder",
+            "example", "test-key", "fake", "dummy", "change-me",
+        ]
+        key_lower = key.lower()
+        for pattern in placeholder_patterns:
+            if pattern in key_lower:
+                logger.debug("Groq not available: API key appears to be a placeholder")
+                return False
 
         # Cek apakah sedang dalam cooldown karena rate limit
         if time.time() < self._rate_limited_until:

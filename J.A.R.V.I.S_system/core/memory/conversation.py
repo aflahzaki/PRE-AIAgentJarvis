@@ -96,6 +96,9 @@ class ConversationMemory:
 
         Keeps the last half of messages and compresses the rest into summary.
         Uses a simple text-based summarization (no AI needed).
+
+        For tool results and code content, preserves more context (up to 500 chars)
+        to avoid losing critical code snippets in multi-turn coding sessions.
         """
         # Simpan separuh terakhir, ringkas separuh pertama
         keep_count = self.max_messages // 2
@@ -110,13 +113,28 @@ class ConversationMemory:
         for msg in old_messages:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
-            # Potong content yang terlalu panjang
-            if len(content) > 200:
-                content = content[:200] + "..."
-            if role != "system":
-                summary_parts.append("[{}]: {}".format(role, content))
 
-        self.summary = "\n".join(summary_parts[-20:])  # Keep last 20 entries
+            if role == "system":
+                continue
+
+            # For tool results and code, allow more context to preserve
+            # critical information like file contents and error messages
+            has_code_or_tool = (
+                "Tool " in content
+                or "[TOOL_CALL]" in content
+                or "```" in content
+                or "def " in content
+                or "class " in content
+            )
+            max_len = 500 if has_code_or_tool else 200
+
+            if len(content) > max_len:
+                content = content[:max_len] + "..."
+
+            summary_parts.append("[{}]: {}".format(role, content))
+
+        # Keep last 30 entries (increased from 20 for longer sessions)
+        self.summary = "\n".join(summary_parts[-30:])
         logger.debug(
             "Summarized %d messages. Buffer now: %d messages",
             len(old_messages),

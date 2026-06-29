@@ -213,6 +213,11 @@ class BaseAgent(ABC):
         Looks for tool calls in format:
         [TOOL_CALL] {"name": "tool_name", "arguments": {...}} [/TOOL_CALL]
 
+        Handles edge cases:
+        - Partial/unclosed [TOOL_CALL] tags (logs warning, skips)
+        - Valid JSON missing required 'name' field (logs warning, skips)
+        - Malformed JSON inside tags (logs warning, skips)
+
         Args:
             content: The LLM response text.
 
@@ -221,22 +226,57 @@ class BaseAgent(ABC):
         """
         tool_calls = []  # type: List[Dict[str, Any]]
 
-        # Cari pattern tool call dalam teks
         import re
+
+        # Check for unclosed/partial tool call tags and warn
+        open_count = content.count("[TOOL_CALL]")
+        close_count = content.count("[/TOOL_CALL]")
+        if open_count != close_count:
+            logger.warning(
+                "Agent '%s': Mismatched tool call tags (open=%d, close=%d). "
+                "Some tool calls may be lost.",
+                self.name, open_count, close_count,
+            )
+
+        # Cari pattern tool call dalam teks
         pattern = r'\[TOOL_CALL\]\s*(\{.*?\})\s*\[/TOOL_CALL\]'
         matches = re.findall(pattern, content, re.DOTALL)
 
         for match in matches:
             try:
                 call_data = json.loads(match)
-                if "name" in call_data:
-                    tool_calls.append({
-                        "name": call_data["name"],
-                        "arguments": call_data.get("arguments", {}),
-                    })
-            except (json.JSONDecodeError, KeyError):
-                logger.debug("Failed to parse tool call: %s", match[:100])
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Agent '%s': Malformed JSON in tool call: %s",
+                    self.name, match[:100],
+                )
                 continue
+
+            if not isinstance(call_data, dict):
+                logger.warning(
+                    "Agent '%s': Tool call JSON is not a dict: %s",
+                    self.name, match[:100],
+                )
+                continue
+
+            if "name" not in call_data:
+                logger.warning(
+                    "Agent '%s': Tool call missing 'name' field: %s",
+                    self.name, match[:100],
+                )
+                continue
+
+            if not isinstance(call_data["name"], str) or not call_data["name"].strip():
+                logger.warning(
+                    "Agent '%s': Tool call has empty/invalid 'name': %s",
+                    self.name, match[:100],
+                )
+                continue
+
+            tool_calls.append({
+                "name": call_data["name"].strip(),
+                "arguments": call_data.get("arguments", {}),
+            })
 
         return tool_calls
 
@@ -272,7 +312,11 @@ class BaseAgent(ABC):
         1. Send message to LLM
         2. Check if response contains tool calls
         3. Execute tools and feed results back
-        4. Repeat until no more tool calls or max retries reached
+        4. Repeat until no more tool calls or max iterations reached
+
+        Uses separate budgets for provider errors vs tool-call iterations:
+        - provider_errors: transient failures (network, rate limit) - max 3
+        - tool_iterations: normal tool-calling rounds - max max_retries
 
         Args:
             user_input: The user's request.
@@ -293,18 +337,26 @@ class BaseAgent(ABC):
             })
 
         final_response = ""
-        retries = 0
+        tool_iterations = 0
+        provider_errors = 0
+        max_provider_errors = 3
 
-        while retries < self.max_retries:
+        while tool_iterations < self.max_retries:
             response = self._call_provider_with_tools(messages)
 
             if not response.success:
-                # Provider error - coba lagi
+                # Provider error - separate budget, does not consume tool iterations
+                provider_errors += 1
                 logger.warning(
-                    "Agent '%s' provider error (retry %d/%d): %s",
-                    self.name, retries + 1, self.max_retries, response.error,
+                    "Agent '%s' provider error (%d/%d): %s",
+                    self.name, provider_errors, max_provider_errors, response.error,
                 )
-                retries += 1
+                if provider_errors >= max_provider_errors:
+                    logger.error(
+                        "Agent '%s' exhausted provider error budget (%d errors)",
+                        self.name, provider_errors,
+                    )
+                    break
                 continue
 
             content = response.content
@@ -343,7 +395,7 @@ class BaseAgent(ABC):
                 ),
             })
 
-            retries += 1
+            tool_iterations += 1
 
         # Simpan ke history
         self._messages.append({"role": "user", "content": user_input})
@@ -352,11 +404,19 @@ class BaseAgent(ABC):
 
         # Jika loop habis tanpa final response, berikan pesan error
         if not final_response:
-            final_response = (
-                "Maaf, saya tidak berhasil menyelesaikan task ini setelah "
-                "{} percobaan. Silakan coba lagi dengan instruksi yang lebih "
-                "spesifik.".format(self.max_retries)
-            )
+            if provider_errors >= max_provider_errors:
+                final_response = (
+                    "Maaf, saya mengalami kendala koneksi ke LLM provider setelah "
+                    "{} percobaan. Pastikan provider tersedia dan coba lagi.".format(
+                        provider_errors
+                    )
+                )
+            else:
+                final_response = (
+                    "Maaf, saya tidak berhasil menyelesaikan task ini setelah "
+                    "{} iterasi tool-calling. Silakan coba lagi dengan instruksi "
+                    "yang lebih spesifik.".format(self.max_retries)
+                )
             self._messages.append({"role": "assistant", "content": final_response})
 
         return final_response
