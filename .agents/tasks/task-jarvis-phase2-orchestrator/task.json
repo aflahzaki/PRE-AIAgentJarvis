@@ -1,0 +1,7 @@
+{
+  "task_id": "task-jarvis-phase2-orchestrator",
+  "task_description": "Build Phase 2 of J.A.R.V.I.S project: Unified Orchestrator with multi-agent and multi-provider architecture. Replace Phidata dependency with raw OpenAI SDK. Create new code in J.A.R.V.I.S_system/core/ subfolder without deleting old files.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
