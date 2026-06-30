@@ -138,6 +138,17 @@
                     </div>
                     <button id="btn-add-knowledge" class="btn-primary">+ Add Knowledge</button>
                 </div>
+                <!-- File Upload Area -->
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="file-upload" multiple accept=".txt,.md,.pdf,.docx,.csv,.json,.py,.js,.html,.css">
+                    <p>Drag &amp; drop files here or click to upload</p>
+                    <p class="upload-formats">Supported: TXT, MD, PDF, DOCX, CSV, JSON, PY, JS, HTML, CSS</p>
+                    <div id="upload-progress" class="upload-progress" style="display:none;">
+                        <div class="upload-progress-bar" id="upload-progress-bar"></div>
+                        <span id="upload-progress-text">Uploading...</span>
+                    </div>
+                    <div id="upload-results" class="upload-results"></div>
+                </div>
                 <!-- Knowledge Create Form -->
                 <div id="knowledge-form-container" class="form-container" style="display:none;">
                     <form id="knowledge-form" class="card-form">

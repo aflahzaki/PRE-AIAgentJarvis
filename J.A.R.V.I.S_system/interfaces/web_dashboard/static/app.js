@@ -407,6 +407,161 @@
         }
     });
 
+    // ============================================
+    // Knowledge File Upload
+    // ============================================
+
+    var uploadArea = document.getElementById('upload-area');
+    var fileInput = document.getElementById('file-upload');
+    var uploadProgress = document.getElementById('upload-progress');
+    var uploadProgressBar = document.getElementById('upload-progress-bar');
+    var uploadProgressText = document.getElementById('upload-progress-text');
+    var uploadResults = document.getElementById('upload-results');
+
+    // Click to trigger file input
+    uploadArea.addEventListener('click', function (e) {
+        if (e.target === fileInput) return;
+        fileInput.click();
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+            handleFileUpload(this.files);
+        }
+    });
+
+    // Drag & drop handlers
+    uploadArea.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('drag-over');
+
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files);
+        }
+    });
+
+    /**
+     * Handle file upload for one or more files.
+     *
+     * @param {FileList} files - The files to upload.
+     */
+    async function handleFileUpload(files) {
+        var totalFiles = files.length;
+        var completed = 0;
+        var results = [];
+
+        // Show progress
+        uploadProgress.style.display = 'block';
+        uploadResults.innerHTML = '';
+        uploadProgressBar.style.width = '0%';
+        uploadProgressText.textContent = 'Uploading 0/' + totalFiles + ' files...';
+
+        for (var i = 0; i < totalFiles; i++) {
+            var file = files[i];
+
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                results.push({ filename: file.name, success: false, error: 'File too large (max 10MB)' });
+                completed++;
+                updateUploadProgress(completed, totalFiles);
+                continue;
+            }
+
+            try {
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('category', 'uploaded');
+                formData.append('tags', '');
+
+                var response = await fetch(API_BASE + '/knowledge/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                var data = await response.json();
+
+                if (response.ok && data.success) {
+                    results.push({
+                        filename: file.name,
+                        success: true,
+                        entries: data.entries_created,
+                    });
+                } else {
+                    results.push({
+                        filename: file.name,
+                        success: false,
+                        error: data.detail || data.error || 'Upload failed',
+                    });
+                }
+            } catch (error) {
+                results.push({
+                    filename: file.name,
+                    success: false,
+                    error: error.message || 'Network error',
+                });
+            }
+
+            completed++;
+            updateUploadProgress(completed, totalFiles);
+        }
+
+        // Show results
+        showUploadResults(results);
+
+        // Reset file input
+        fileInput.value = '';
+
+        // Reload knowledge list after upload
+        setTimeout(loadKnowledge, 500);
+    }
+
+    function updateUploadProgress(completed, total) {
+        var pct = Math.round((completed / total) * 100);
+        uploadProgressBar.style.width = pct + '%';
+        uploadProgressText.textContent = 'Uploading ' + completed + '/' + total + ' files...';
+        if (completed >= total) {
+            uploadProgressText.textContent = 'Upload complete!';
+        }
+    }
+
+    function showUploadResults(results) {
+        var html = '';
+        results.forEach(function (r) {
+            if (r.success) {
+                html += '<div class="upload-result-item success">';
+                html += '<span>' + escapeHtml(r.filename) + '</span>';
+                html += '<span class="badge badge-completed">' + r.entries + ' entries created</span>';
+                html += '</div>';
+            } else {
+                html += '<div class="upload-result-item error">';
+                html += '<span>' + escapeHtml(r.filename) + '</span>';
+                html += '<span class="badge badge-urgent">' + escapeHtml(r.error) + '</span>';
+                html += '</div>';
+            }
+        });
+        uploadResults.innerHTML = html;
+
+        // Auto-hide progress after 5 seconds
+        setTimeout(function () {
+            uploadProgress.style.display = 'none';
+            uploadResults.innerHTML = '';
+        }, 5000);
+    }
+
     async function loadKnowledge() {
         var container = document.getElementById('knowledge-list');
         try {

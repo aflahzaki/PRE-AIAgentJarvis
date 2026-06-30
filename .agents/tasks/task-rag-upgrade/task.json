@@ -1,0 +1,7 @@
+{
+  "task_id": "task-rag-upgrade",
+  "task_description": "Upgrade #4: Enhanced RAG Pipeline + File Upload for Knowledge Base",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

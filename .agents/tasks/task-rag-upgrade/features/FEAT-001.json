@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "title": "Enhanced RAG Pipeline + File Upload for Knowledge Base",
+  "description": "Implement document_loader.py, rag_engine.py, upload_tools.py, upgrade embeddings.py, add upload endpoint to web dashboard, add upload UI to frontend, integrate RAG into orchestrator, update .env.example and requirements_v2.txt.",
+  "status": "in_progress",
+  "steps": [
+    "Create core/knowledge/document_loader.py with multi-format file parser",
+    "Create core/knowledge/rag_engine.py with enhanced RAG retrieval",
+    "Create core/tools/upload_tools.py with file upload processing",
+    "Update core/knowledge/embeddings.py with sentence-transformers support",
+    "Update interfaces/web_dashboard/routes/knowledge.py with upload endpoint",
+    "Update interfaces/web_dashboard/static/index.html with upload area",
+    "Update interfaces/web_dashboard/static/app.js with upload UI logic",
+    "Update core/orchestrator.py to integrate RAG",
+    "Update .env.example with RAG config",
+    "Update requirements_v2.txt with optional dependencies"
+  ],
+  "acceptance_criteria": [
+    "All new files are importable without errors",
+    "All optional libraries are gracefully handled with try/except",
+    "Existing knowledge base functionality is not broken",
+    "File upload validates file size (max 10MB)",
+    "RAG only injects context when RAG_ENABLED=true",
+    "TF-IDF remains the default embeddings engine",
+    "Upload supports drag & drop in the web UI"
+  ]
+}

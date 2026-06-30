@@ -458,7 +458,8 @@ class Orchestrator:
         """Get a direct LLM response without agent overhead.
 
         Used for simple queries that don't need tool calling or
-        specialized agent logic.
+        specialized agent logic. Injects relevant knowledge base
+        context via RAG when RAG_ENABLED=true.
 
         Args:
             user_input: The user's message.
@@ -468,7 +469,14 @@ class Orchestrator:
             LLM response string.
         """
         # Build messages dengan system prompt JARVIS
-        messages = [{"role": "system", "content": self._SIMPLE_SYSTEM_PROMPT}]
+        system_content = self._SIMPLE_SYSTEM_PROMPT
+
+        # Inject RAG context if enabled
+        rag_context = self._get_rag_context(user_input)
+        if rag_context:
+            system_content = "{}\n\n{}".format(system_content, rag_context)
+
+        messages = [{"role": "system", "content": system_content}]
 
         # Tambahkan context dari memory jika ada
         history = self.memory.get_messages(include_summary=True)
@@ -494,6 +502,36 @@ class Orchestrator:
                 "Maaf, saya mengalami kendala teknis: {}. "
                 "Pastikan provider LLM tersedia.".format(response.error)
             )
+
+    def _get_rag_context(self, query: str) -> str:
+        """Retrieve RAG context for a query if RAG is enabled.
+
+        Lazily initializes the RAG engine on first call.
+
+        Args:
+            query: User query to find relevant context for.
+
+        Returns:
+            Formatted context string, or empty string if RAG disabled/unavailable.
+        """
+        try:
+            import os
+            rag_enabled = os.environ.get("RAG_ENABLED", "true").lower()
+            if rag_enabled not in ("true", "1", "yes"):
+                return ""
+
+            if not hasattr(self, "_rag_engine"):
+                from core.knowledge.rag_engine import RAGEngine
+                self._rag_engine = RAGEngine()
+
+            if self._rag_engine is None:
+                return ""
+
+            return self._rag_engine.build_context_prompt(query)
+
+        except Exception as e:
+            logger.debug("RAG context retrieval skipped: %s", str(e))
+            return ""
 
     def process(self, user_input: str) -> Dict[str, str]:
         """Process user input through the full orchestration pipeline.
@@ -595,6 +633,12 @@ class Orchestrator:
             if task_type == "simple":
                 # Stream directly from provider for simple tasks
                 messages = [{"role": "system", "content": self._SIMPLE_SYSTEM_PROMPT}]
+
+                # Inject RAG context if enabled
+                rag_context = self._get_rag_context(user_input)
+                if rag_context:
+                    system_content = "{}\n\n{}".format(self._SIMPLE_SYSTEM_PROMPT, rag_context)
+                    messages = [{"role": "system", "content": system_content}]
 
                 # Add context from memory
                 history = self.memory.get_messages(include_summary=True)
