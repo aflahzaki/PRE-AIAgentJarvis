@@ -1,0 +1,40 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create the foundational infrastructure: providers, tools, memory, and configuration files. This establishes the base layer that agents and orchestrator depend on.",
+  "status": "completed",
+  "steps": [
+    "Create J.A.R.V.I.S_system/.env.example with Ollama, Groq, and optional Gemini config as specified in the user requirements",
+    "Create J.A.R.V.I.S_system/.gitignore excluding .env, __pycache__, *.pyc, .venv, etc.",
+    "Create J.A.R.V.I.S_system/requirements_v2.txt with: openai>=1.3.0, python-dotenv>=1.0.0, groq>=0.4.0, rich>=13.0.0",
+    "Create J.A.R.V.I.S_system/core/__init__.py with package docstring",
+    "Create J.A.R.V.I.S_system/core/providers/__init__.py that exports all providers",
+    "Create J.A.R.V.I.S_system/core/providers/base_provider.py - Abstract base class with chat_completion(messages, model, temperature, max_tokens) and is_available() health check methods. Use ABC. Include proper type hints and docstrings.",
+    "Create J.A.R.V.I.S_system/core/providers/ollama_provider.py - Uses OpenAI SDK with base_url=http://localhost:11434/v1. Implements health check by pinging Ollama. Handles connection errors gracefully. No API key needed (uses 'ollama' as dummy key).",
+    "Create J.A.R.V.I.S_system/core/providers/groq_provider.py - Uses OpenAI SDK with base_url=https://api.groq.com/openai/v1. Reads GROQ_API_KEY from env. Rate limit awareness (track request counts). Graceful handling when key is missing.",
+    "Create J.A.R.V.I.S_system/core/tools/__init__.py that exports tool functions",
+    "Create J.A.R.V.I.S_system/core/tools/file_tools.py - Pure Python implementation of read_file, write_file, list_files, edit_file (find & replace). All functions return structured dict results with success/error status. Proper error handling for file not found, permission errors, etc.",
+    "Create J.A.R.V.I.S_system/core/tools/python_executor.py - Execute Python scripts via subprocess with 30s timeout. Capture stdout/stderr. Return structured dict with output, error, exit_code. Handle timeout gracefully.",
+    "Create J.A.R.V.I.S_system/core/memory/__init__.py",
+    "Create J.A.R.V.I.S_system/core/memory/conversation.py - ConversationMemory class with: add_message(), get_messages(), clear(), save_to_file(path), load_from_file(path). Buffer last N messages (configurable, default 50). When buffer full, summarize older messages into a summary string. JSON persistence.",
+    "Create J.A.R.V.I.S_system/core/model_router.py - ModelRouter class that analyzes user input and determines difficulty (EASY/MEDIUM/HARD). Uses keyword/heuristic-based detection (no AI needed for routing). Returns recommended provider + model. Implements fallback logic: if Ollama unavailable use Groq, if Groq rate limited use alternative. Configuration via environment variables for model names."
+  ],
+  "acceptance_criteria": [
+    "All files created with proper Python 3.8+ syntax (no walrus operator, no match statements)",
+    "All modules import without errors when requirements_v2.txt is installed",
+    "Type hints present on all function signatures",
+    "Each provider's is_available() returns False gracefully when service is unreachable (no crashes)",
+    "file_tools functions handle edge cases (nonexistent files, permission errors) without raising unhandled exceptions",
+    "python_executor handles timeout and returns structured error",
+    "ConversationMemory can save/load JSON round-trip",
+    "ModelRouter correctly classifies: 'halo' as EASY, 'perbaiki bug di main.py' as MEDIUM, 'design a microservices architecture' as HARD"
+  ],
+  "verification": [
+    "Run: pip install -r J.A.R.V.I.S_system/requirements_v2.txt",
+    "Run: python -m py_compile on every .py file in core/",
+    "Run: python -c to import all modules and verify no import errors",
+    "Run a quick smoke test script that instantiates ModelRouter, ConversationMemory, file_tools functions, and python_executor"
+  ],
+  "blocked_reason": null,
+  "findings": "All 14 files created and verified. python3 must be used (not python) in this sandbox - pyenv shim for python is not linked. pip installed openai 2.44.0, groq 1.0.0, rich 15.0.0. Both providers return is_available()=False in sandbox (expected: no Ollama server, no Groq key). The distro package version conflict with awscli is cosmetic and does not affect functionality. All smoke tests pass including difficulty classification, memory round-trip, file tools, and python executor timeout."
+}

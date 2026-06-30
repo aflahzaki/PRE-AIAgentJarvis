@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+"""
+J.A.R.V.I.S v2 - Interactive REPL Entry Point.
+
+Unified orchestrator with multi-agent, multi-provider architecture.
+Beautiful terminal interface powered by Rich library.
+
+Usage:
+    python run_jarvis_v2.py
+
+Special Commands:
+    help    - Show available commands
+    tools   - Show registered agent tools
+    status  - Show provider/system status
+    models  - Show installed/missing Ollama models
+    export  - Export conversation to Markdown
+    export html - Export conversation to HTML
+    export txt  - Export conversation to plain text
+    clear   - Clear conversation memory
+    exit    - Exit the program (also: quit, q)
+"""
+
+import logging
+import os
+import sys
+from datetime import datetime
+
+# Pastikan core module bisa di-import dari direktori ini
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from dotenv import load_dotenv
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
+from core.orchestrator import Orchestrator
+from core.utils.model_manager import ModelManager
+from core.utils.export import ConversationExporter
+
+# Setup logging - hanya WARNING ke atas agar tidak spam terminal
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
+
+# Rich console untuk output yang cantik
+console = Console()
+
+
+def print_banner() -> None:
+    """Display the J.A.R.V.I.S welcome banner."""
+    banner_text = (
+        "[bold cyan]J.A.R.V.I.S[/bold cyan] v2.0\n"
+        "[dim]Just A Rather Very Intelligent System[/dim]\n\n"
+        "[green]Multi-Agent[/green] | [blue]Multi-Provider[/blue] | "
+        "[yellow]Self-Healing[/yellow]\n\n"
+        "[dim]Type [bold]help[/bold] for commands, "
+        "[bold]exit[/bold] to quit[/dim]"
+    )
+    console.print(Panel(
+        banner_text,
+        title="[bold white]Welcome[/bold white]",
+        border_style="cyan",
+        padding=(1, 2),
+    ))
+
+
+def print_help() -> None:
+    """Display available commands."""
+    table = Table(title="Available Commands", border_style="cyan")
+    table.add_column("Command", style="bold green")
+    table.add_column("Description")
+
+    table.add_row("help", "Show this help message")
+    table.add_row("tools", "Show available agent tools")
+    table.add_row("status", "Show provider and system status")
+    table.add_row("models", "Show installed/missing Ollama models")
+    table.add_row("export", "Export conversation to Markdown file")
+    table.add_row("export html", "Export conversation to HTML file")
+    table.add_row("export txt", "Export conversation to plain text file")
+    table.add_row("clear", "Clear conversation memory")
+    table.add_row("exit / quit / q", "Exit J.A.R.V.I.S")
+
+    console.print(table)
+    console.print(
+        "\n[dim]Just type your question or task normally to interact with J.A.R.V.I.S.[/dim]"
+    )
+
+
+def print_tools(orchestrator: Orchestrator) -> None:
+    """Display registered tools for the coding agent."""
+    # Buat temporary coder agent untuk menampilkan tools
+    from core.agents.coder_agent import CoderAgent
+    from core.providers.ollama_provider import OllamaProvider
+
+    # Gunakan dummy provider hanya untuk menampilkan tool list
+    dummy_provider = OllamaProvider()
+    agent = CoderAgent(provider=dummy_provider, model="display-only")
+    tool_names = agent.get_tool_names()
+
+    table = Table(title="Registered Tools (Coder Agent)", border_style="green")
+    table.add_column("Tool", style="bold yellow")
+    table.add_column("Description")
+
+    for name in tool_names:
+        if name in agent._tools:
+            _, schema = agent._tools[name]
+            desc = schema["function"]["description"]
+            table.add_row(name, desc)
+
+    console.print(table)
+
+
+def print_status(orchestrator: Orchestrator) -> None:
+    """Display system and provider status."""
+    # Refresh provider status
+    orchestrator.refresh_providers()
+    status = orchestrator.get_status()
+
+    # Provider status table
+    table = Table(title="System Status", border_style="blue")
+    table.add_column("Component", style="bold")
+    table.add_column("Status")
+    table.add_column("Details")
+
+    # Ollama
+    ollama_info = status["providers"]["ollama"]
+    ollama_status = (
+        "[green]Available[/green]"
+        if ollama_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    ollama_details = "Models: {} / {}".format(
+        ollama_info["model_small"], ollama_info["model_medium"]
+    )
+    table.add_row("Ollama (Local)", ollama_status, ollama_details)
+
+    # Groq
+    groq_info = status["providers"]["groq"]
+    groq_status = (
+        "[green]Available[/green]"
+        if groq_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    groq_rate_info = groq_info.get("rate_limit", {})
+    groq_details = "Model: {} | Requests: {}/{}".format(
+        groq_info["model"],
+        groq_rate_info.get("requests_last_minute", 0),
+        groq_rate_info.get("max_requests_per_minute", 30),
+    )
+    table.add_row("Groq (Cloud)", groq_status, groq_details)
+
+    # Gemini
+    gemini_info = status["providers"]["gemini"]
+    gemini_status = (
+        "[green]Available[/green]"
+        if gemini_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    gemini_rate_info = gemini_info.get("rate_limit", {})
+    gemini_details = "Model: {} | Requests: {}/{}".format(
+        gemini_info["model"],
+        gemini_rate_info.get("requests_last_minute", 0),
+        gemini_rate_info.get("max_requests_per_minute", 60),
+    )
+    table.add_row("Gemini (Google)", gemini_status, gemini_details)
+
+    # OpenRouter
+    openrouter_info = status["providers"]["openrouter"]
+    openrouter_status = (
+        "[green]Available[/green]"
+        if openrouter_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    openrouter_rate_info = openrouter_info.get("rate_limit", {})
+    openrouter_details = "Model: {} | Requests: {}/{}".format(
+        openrouter_info["model"],
+        openrouter_rate_info.get("requests_last_minute", 0),
+        openrouter_rate_info.get("max_requests_per_minute", 20),
+    )
+    table.add_row("OpenRouter (Multi)", openrouter_status, openrouter_details)
+
+    # Memory
+    mem_info = status["memory"]
+    mem_details = "Messages: {} / {} | Summary: {}".format(
+        mem_info["messages"],
+        mem_info["max_messages"],
+        "Yes" if mem_info["has_summary"] else "No",
+    )
+    table.add_row("Memory", "[green]Active[/green]", mem_details)
+
+    console.print(table)
+
+    # Warning jika tidak ada provider
+    any_available = (
+        ollama_info["available"]
+        or groq_info["available"]
+        or gemini_info["available"]
+        or openrouter_info["available"]
+    )
+    if not any_available:
+        console.print(
+            "\n[bold red]WARNING:[/bold red] No LLM providers available!\n"
+            "[dim]- Start Ollama: [bold]ollama serve[/bold]\n"
+            "- Or set GROQ_API_KEY in .env file\n"
+            "- Or set GEMINI_API_KEY in .env file\n"
+            "- Or set OPENROUTER_API_KEY in .env file[/dim]"
+        )
+
+
+def process_input(orchestrator: Orchestrator, user_input: str) -> None:
+    """Process user input and display the response.
+
+    Args:
+        orchestrator: The Orchestrator instance.
+        user_input: The user's input text.
+    """
+    # Tampilkan spinner saat processing
+    with console.status("[cyan]Thinking...[/cyan]", spinner="dots"):
+        result = orchestrator.process(user_input)
+
+    # Metadata: provider dan model yang digunakan
+    meta_text = "[dim][{provider}] {model} | {task_type} ({difficulty})[/dim]".format(
+        provider=result["provider"],
+        model=result["model"],
+        task_type=result["task_type"],
+        difficulty=result["difficulty"],
+    )
+    console.print(meta_text)
+
+    # Response content - render sebagai Markdown jika memungkinkan
+    response_text = result["response"]
+    if response_text:
+        try:
+            md = Markdown(response_text)
+            console.print(Panel(md, border_style="green", padding=(0, 1)))
+        except Exception:
+            # Fallback ke plain text jika Markdown parsing gagal
+            console.print(Panel(response_text, border_style="green", padding=(0, 1)))
+    else:
+        console.print(
+            "[yellow]No response received. Check provider status with 'status' command.[/yellow]"
+        )
+
+
+def process_input_streaming(orchestrator: Orchestrator, user_input: str) -> None:
+    """Process user input with streaming output - tokens appear in real-time.
+
+    Calls orchestrator.process_stream() and prints tokens one by one
+    as they are generated. No spinner is used since tokens appear
+    incrementally.
+
+    Args:
+        orchestrator: The Orchestrator instance.
+        user_input: The user's input text.
+    """
+    full_response = ""
+    for token in orchestrator.process_stream(user_input):
+        console.print(token, end="")
+        full_response += token
+
+    # Print newline after streaming completes
+    console.print()
+
+    # If no output was produced, notify user
+    if not full_response:
+        console.print(
+            "[yellow]No response received. Check provider status with 'status' command.[/yellow]"
+        )
+
+
+def print_models() -> None:
+    """Display installed and missing Ollama models."""
+    mm = ModelManager()
+
+    if not mm.check_ollama_installed():
+        console.print(
+            "[bold red]Ollama not found.[/bold red]\n"
+            "[dim]Install from: https://ollama.ai[/dim]"
+        )
+        return
+
+    table = Table(title="Ollama Model Status", border_style="cyan")
+    table.add_column("Model", style="bold")
+    table.add_column("Status")
+    table.add_column("Size")
+    table.add_column("Use Case")
+
+    status = mm.get_model_status()
+
+    # Show recommended models with their status
+    from core.utils.model_manager import RECOMMENDED_MODELS
+    installed_names = [m["name"] for m in status["installed"]]
+
+    for tier, info in RECOMMENDED_MODELS.items():
+        is_installed = info["name"] in installed_names
+        status_text = (
+            "[green]Installed[/green]"
+            if is_installed
+            else "[yellow]Not installed[/yellow]"
+        )
+        table.add_row(
+            info["name"],
+            status_text,
+            info["size"],
+            info["use"],
+        )
+
+    console.print(table)
+
+    # Show other installed models not in recommended list
+    recommended_names = [info["name"] for info in RECOMMENDED_MODELS.values()]
+    other_models = [
+        m["name"] for m in status["installed"]
+        if m["name"] not in recommended_names
+    ]
+    if other_models:
+        console.print("\n[dim]Other installed models: {}[/dim]".format(
+            ", ".join(other_models)
+        ))
+
+    # Suggestion
+    suggestion = mm.suggest_downloads()
+    if suggestion:
+        console.print("\n[yellow]{}[/yellow]".format(suggestion))
+
+
+def export_conversation(orchestrator: Orchestrator, command: str) -> None:
+    """Export the current conversation to a file.
+
+    Args:
+        orchestrator: The Orchestrator instance.
+        command: The full command string (e.g., 'export', 'export html').
+    """
+    # Determine format from command
+    parts = command.strip().split()
+    if len(parts) > 1:
+        fmt = parts[1].lower()
+    else:
+        fmt = "md"
+
+    # Validate format
+    valid_formats = ("md", "html", "txt")
+    if fmt not in valid_formats:
+        console.print(
+            "[red]Invalid format: {}[/red]\n"
+            "[dim]Supported formats: md, html, txt[/dim]".format(fmt)
+        )
+        return
+
+    # Get messages from orchestrator memory
+    messages = orchestrator.memory.get_messages(include_summary=False)
+
+    if not messages:
+        console.print(
+            "[yellow]No messages to export. Start a conversation first.[/yellow]"
+        )
+        return
+
+    # Generate output filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ext_map = {"md": "md", "html": "html", "txt": "txt"}
+    filename = "jarvis_conversation_{}.{}".format(timestamp, ext_map[fmt])
+
+    # Export
+    exporter = ConversationExporter()
+    result = exporter.export_to_file(messages, filename, fmt)
+
+    if result.get("success"):
+        console.print(
+            "[green]Conversation exported to:[/green] {}".format(result["path"])
+        )
+    else:
+        console.print(
+            "[red]Export failed:[/red] {}".format(result.get("error", "Unknown error"))
+        )
+
+
+def main() -> None:
+    """Main entry point - Interactive REPL loop."""
+    # Load environment variables dari .env file
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    load_dotenv(env_path)
+
+    # Tampilkan welcome banner
+    print_banner()
+
+    # Inisialisasi orchestrator
+    try:
+        orchestrator = Orchestrator()
+    except Exception as e:
+        console.print(
+            "[bold red]Error initializing J.A.R.V.I.S:[/bold red] {}".format(str(e))
+        )
+        sys.exit(1)
+
+    # Startup model check - only if Ollama is installed
+    try:
+        mm = ModelManager()
+        if mm.check_ollama_installed():
+            suggestion = mm.suggest_downloads()
+            if suggestion:
+                console.print(Panel(
+                    suggestion,
+                    title="Model Suggestions",
+                    border_style="yellow",
+                ))
+    except Exception:
+        pass  # Graceful - never crash on model check
+
+    # REPL loop
+    while True:
+        try:
+            # Prompt input
+            console.print()  # Blank line sebelum prompt
+            user_input = console.input("[bold cyan]You>[/bold cyan] ")
+            user_input = user_input.strip()
+
+            # Skip input kosong
+            if not user_input:
+                continue
+
+            # Handle special commands (case-insensitive)
+            command = user_input.lower()
+
+            if command in ("exit", "quit", "q"):
+                console.print(
+                    "\n[cyan]Sampai jumpa! J.A.R.V.I.S signing off.[/cyan]\n"
+                )
+                break
+
+            elif command == "help":
+                print_help()
+                continue
+
+            elif command == "tools":
+                print_tools(orchestrator)
+                continue
+
+            elif command == "status":
+                print_status(orchestrator)
+                continue
+
+            elif command == "clear":
+                orchestrator.clear_memory()
+                console.print("[green]Conversation memory cleared.[/green]")
+                continue
+
+            elif command == "models":
+                print_models()
+                continue
+
+            elif command.startswith("export"):
+                export_conversation(orchestrator, command)
+                continue
+
+            # Normal input - process melalui orchestrator with streaming
+            try:
+                process_input_streaming(orchestrator, user_input)
+            except Exception:
+                # Fallback to non-streaming if streaming fails
+                process_input(orchestrator, user_input)
+
+        except KeyboardInterrupt:
+            # Ctrl+C - graceful exit
+            console.print(
+                "\n\n[cyan]Interrupted. Sampai jumpa![/cyan]\n"
+            )
+            break
+
+        except EOFError:
+            # End of input (piped input habis)
+            console.print(
+                "\n[cyan]End of input. J.A.R.V.I.S signing off.[/cyan]\n"
+            )
+            break
+
+        except Exception as e:
+            # Unexpected error - tampilkan tapi jangan crash
+            console.print(
+                "[bold red]Error:[/bold red] {}".format(str(e))
+            )
+            console.print("[dim]Type 'help' for available commands.[/dim]")
+
+
+if __name__ == "__main__":
+    main()

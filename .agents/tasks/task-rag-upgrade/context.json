@@ -1,0 +1,11 @@
+{
+  "project_type": "Python AI Agent System with FastAPI web dashboard",
+  "language": "Python 3.11",
+  "build_system": "pip with requirements_v2.txt",
+  "test_framework": "No formal test framework; validation via imports and syntax checks",
+  "build_command": "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"import core.orchestrator; print('Core OK')\"",
+  "test_command": "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"import sys; sys.path.insert(0,'.'); from core.knowledge.document_loader import DocumentLoader; from core.knowledge.rag_engine import RAGEngine; from core.tools.upload_tools import upload_to_knowledge_base, bulk_upload_directory; from core.knowledge.embeddings import SimpleEmbeddings; print('All RAG imports OK')\"",
+  "verification_instructions": "1. Verify all new files are importable without error. 2. Verify existing core/knowledge/knowledge_base.py still works. 3. Check .env.example has new RAG entries. 4. Check requirements_v2.txt has new optional entries.",
+  "setup_instructions": "pip install -r requirements_v2.txt",
+  "environment_constraints": "OPEN_INTERNET network mode. Python 3.11.14 available."
+}

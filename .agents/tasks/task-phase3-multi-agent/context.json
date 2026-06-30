@@ -1,0 +1,27 @@
+{
+  "project_type": "Python multi-agent AI system (J.A.R.V.I.S) with CLI REPL interface",
+  "language": "Python 3.11",
+  "build_system": "pip with requirements_v2.txt, no Makefile or build script",
+  "test_framework": "No formal test framework present - validation via Python syntax checks and import testing",
+  "build_command": "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"import core\"",
+  "test_command": "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.orchestrator import Orchestrator; from core.agents import *; print('All imports OK')\"",
+  "verification_instructions": "1. Run python -c to verify all new modules import without error. 2. Verify each new agent class can be instantiated (with mock provider). 3. Verify orchestrator routes new task types correctly. 4. Verify database models can be loaded without MySQL connection (SQLite fallback).",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -r requirements_v2.txt (after updating it with new deps)",
+  "environment_constraints": "OPEN_INTERNET network mode. Python 3.11.14 available. No MySQL/MariaDB server in sandbox - database code must gracefully fallback to SQLite. No GPU - embeddings must be CPU-only (TF-IDF). All external library imports must be wrapped in try/except for graceful degradation.",
+  "contribution_requirements": "Do NOT modify existing files in core/agents/, core/tools/, core/providers/, core/memory/. Only ADD new files and UPDATE orchestrator.py, model_router.py, .env.example, requirements_v2.txt. All imports of external libs must use try/except. Graceful fallback everywhere.",
+  "key_patterns": "BaseAgent pattern: inherit from BaseAgent, implement get_agent_type(), register tools in __init__. Tools are plain functions returning dicts with 'success' key. Tool registration uses register_tool(name, func, description, parameters_json_schema). Orchestrator uses regex pattern matching for task classification with score-based routing. ModelRouter uses Difficulty enum (EASY/MEDIUM/HARD). Text-based tool calling format: [TOOL_CALL] {json} [/TOOL_CALL].",
+  "relevant_files": [
+    "J.A.R.V.I.S_system/core/agents/base_agent.py",
+    "J.A.R.V.I.S_system/core/agents/coder_agent.py",
+    "J.A.R.V.I.S_system/core/agents/researcher_agent.py",
+    "J.A.R.V.I.S_system/core/agents/__init__.py",
+    "J.A.R.V.I.S_system/core/orchestrator.py",
+    "J.A.R.V.I.S_system/core/model_router.py",
+    "J.A.R.V.I.S_system/core/tools/__init__.py",
+    "J.A.R.V.I.S_system/core/tools/file_tools.py",
+    "J.A.R.V.I.S_system/requirements_v2.txt",
+    "J.A.R.V.I.S_system/.env.example"
+  ],
+  "directory_structure": "J.A.R.V.I.S_system/ is the project root. core/ contains all modules. core/agents/ has agent classes inheriting BaseAgent. core/tools/ has tool functions. core/providers/ has LLM providers (Ollama, Groq). core/memory/ has conversation memory. run_jarvis_v2.py is the entry point REPL."
+}

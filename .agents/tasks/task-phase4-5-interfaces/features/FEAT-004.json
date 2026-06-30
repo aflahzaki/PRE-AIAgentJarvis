@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Create Proactive Engine (interfaces/proactive/) with proactive_engine.py, triggers.py, notifications.py. Create run_all.py entry point. Update .env.example and requirements_v2.txt with all new entries.",
+  "status": "completed",
+  "steps": [
+    "Create J.A.R.V.I.S_system/interfaces/proactive/__init__.py with ProactiveEngine export",
+    "Create J.A.R.V.I.S_system/interfaces/proactive/proactive_engine.py - Background thread/scheduler running every X minutes (PROACTIVE_INTERVAL_MINUTES env var, default 15). Checks triggers and sends notifications. Configurable enable/disable via PROACTIVE_ENABLED env var. Can start alongside other interfaces. Uses 'schedule' library.",
+    "Create J.A.R.V.I.S_system/interfaces/proactive/triggers.py - Trigger check functions: check_overdue_tasks() (uses scheduler_tools.get_overdue_tasks()), check_unlogged_habits() (query habits without today's log), check_upcoming_deadlines() (tasks due within 24h), daily_summary() (morning summary of tasks), mood_check() (afternoon check if no journal today). Each returns a list of notification messages.",
+    "Create J.A.R.V.I.S_system/interfaces/proactive/notifications.py - Notification dispatch: console_notify(message) prints to terminal, telegram_notify(message, bot_token, chat_id) sends via Telegram API (optional, graceful if no token). Interface-agnostic design for future extension.",
+    "Create J.A.R.V.I.S_system/run_all.py - Starts Terminal REPL + Web Dashboard + Proactive Engine together (Telegram separate as noted in spec). Uses threading for concurrent operation. Graceful shutdown on Ctrl+C.",
+    "Update J.A.R.V.I.S_system/.env.example - APPEND (do not replace existing content) the new env vars: TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS, WEB_HOST, WEB_PORT, VOICE_MODEL, VOICE_LANGUAGE, TTS_VOICE, PROACTIVE_ENABLED, PROACTIVE_INTERVAL_MINUTES",
+    "Update J.A.R.V.I.S_system/requirements_v2.txt - APPEND (do not replace existing content) new dependencies: python-telegram-bot>=20.0, fastapi>=0.100.0, uvicorn>=0.23.0, schedule>=1.2.0, and commented voice deps (faster-whisper, edge-tts, sounddevice, numpy)"
+  ],
+  "acceptance_criteria": [
+    "proactive_engine.py is importable and ProactiveEngine class exists",
+    "triggers.py defines all 5 trigger check functions",
+    "notifications.py provides console_notify and telegram_notify functions",
+    "run_all.py is syntactically valid and starts multiple services",
+    ".env.example contains all new env vars appended after existing content",
+    "requirements_v2.txt contains all new dependencies appended after existing content",
+    "No existing content in .env.example or requirements_v2.txt is removed or changed"
+  ],
+  "verification": [
+    "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from interfaces.proactive.proactive_engine import ProactiveEngine; print('Proactive OK')\"",
+    "python -c \"import ast; ast.parse(open('J.A.R.V.I.S_system/run_all.py').read()); print('run_all.py valid')\"",
+    "grep -q 'TELEGRAM_BOT_TOKEN' J.A.R.V.I.S_system/.env.example && grep -q 'PROACTIVE_ENABLED' J.A.R.V.I.S_system/.env.example && echo 'env OK'",
+    "grep -q 'python-telegram-bot' J.A.R.V.I.S_system/requirements_v2.txt && grep -q 'fastapi' J.A.R.V.I.S_system/requirements_v2.txt && grep -q 'schedule' J.A.R.V.I.S_system/requirements_v2.txt && echo 'reqs OK'"
+  ],
+  "blocked_reason": null,
+  "findings": "All 6 files created successfully. ProactiveEngine imports cleanly and all 5 trigger functions are importable. notifications.py provides both console_notify and telegram_notify. run_all.py passes AST validation and starts Terminal REPL + Web Dashboard + Proactive Engine with threading. .env.example appended with TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS, VOICE_MODEL, VOICE_LANGUAGE, TTS_VOICE, PROACTIVE_ENABLED, PROACTIVE_INTERVAL_MINUTES (WEB_HOST/WEB_PORT already existed from FEAT-002). requirements_v2.txt appended with python-telegram-bot, schedule, and commented voice deps (fastapi/uvicorn already existed from FEAT-002). No core/ files were modified."
+}

@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add streaming support and native function calling to the provider layer (base_provider.py, ollama_provider.py, groq_provider.py) and upgrade the ProviderResponse dataclass with a tool_calls field.",
+  "status": "completed",
+  "steps": [
+    "In J.A.R.V.I.S_system/core/providers/base_provider.py: Add 'from typing import Generator, Any' to imports. Add 'tool_calls: List[Dict[str, Any]] = field(default_factory=list)' field to ProviderResponse dataclass. Add abstract method stream_chat_completion() that yields str tokens. Add concrete method supports_function_calling() returning False by default. Add concrete method chat_completion_with_tools() that accepts a tools parameter and returns ProviderResponse (default implementation falls back to chat_completion).",
+    "In J.A.R.V.I.S_system/core/providers/ollama_provider.py: Add 'import json' and 'from typing import Generator, Any' to imports. Implement stream_chat_completion() using self.client.chat.completions.create(stream=True). Implement supports_function_calling() returning True. Implement chat_completion_with_tools() that passes tools to the API, parses msg.tool_calls into list of dicts with id/name/arguments, with try/except fallback to regular chat_completion.",
+    "In J.A.R.V.I.S_system/core/providers/groq_provider.py: Add 'import json' and 'from typing import Generator, Any' to imports. Implement stream_chat_completion() with rate limit checking before streaming. Implement supports_function_calling() returning True. Implement chat_completion_with_tools() with the same pattern as Ollama, including rate limit checks and fallback."
+  ],
+  "acceptance_criteria": [
+    "ProviderResponse has a tool_calls field defaulting to empty list",
+    "BaseProvider has stream_chat_completion as abstract method",
+    "BaseProvider has supports_function_calling() returning False",
+    "BaseProvider has chat_completion_with_tools() with default fallback implementation",
+    "OllamaProvider implements all three new methods",
+    "GroqProvider implements all three new methods with rate limit awareness",
+    "All existing chat_completion() methods remain unchanged",
+    "Import check passes: python -c 'from core.providers.base_provider import BaseProvider, ProviderResponse; from core.providers.ollama_provider import OllamaProvider; from core.providers.groq_provider import GroqProvider; print(\"OK\")'"
+  ],
+  "verification": [
+    "Run: cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.providers.base_provider import BaseProvider, ProviderResponse; from core.providers.ollama_provider import OllamaProvider; from core.providers.groq_provider import GroqProvider; r = ProviderResponse(); assert hasattr(r, 'tool_calls'); assert r.tool_calls == []; assert hasattr(OllamaProvider, 'stream_chat_completion'); assert hasattr(OllamaProvider, 'supports_function_calling'); assert hasattr(OllamaProvider, 'chat_completion_with_tools'); assert hasattr(GroqProvider, 'stream_chat_completion'); assert hasattr(GroqProvider, 'supports_function_calling'); assert hasattr(GroqProvider, 'chat_completion_with_tools'); print('ALL CHECKS PASSED')\""
+  ],
+  "blocked_reason": null,
+  "findings": "Implementation completed successfully. All verification checks pass. The Generator import from typing was already available alongside Any. No f-strings used - all .format() style. Existing methods untouched. ProviderResponse dataclass field order places tool_calls last to avoid breaking positional args."
+}

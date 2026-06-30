@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Create the agent layer (base_agent, coder_agent, researcher_agent), the orchestrator, and the entry point (run_jarvis_v2.py). This builds on FEAT-001's providers/tools/memory/router to create the complete working system.",
+  "status": "completed",
+  "steps": [
+    "Create J.A.R.V.I.S_system/core/agents/__init__.py that exports all agents",
+    "Create J.A.R.V.I.S_system/core/agents/base_agent.py - Abstract base agent class with: system prompt management (configurable per agent), self-healing loop logic (max 5 retries), tool calling infrastructure (register tools as callables, parse tool calls from LLM response, execute them, feed results back), message history management. Personality traits baked in: honest, critical, fact-based, autonomous, self-healing, humble. Uses providers from FEAT-001 for actual LLM calls.",
+    "Create J.A.R.V.I.S_system/core/agents/coder_agent.py - Inherits BaseAgent. Adds: coding-specific system prompt, registers file_tools + python_executor as available tools, autonomous debugging loop (write code -> execute -> check errors -> fix -> repeat up to 5 times), structured output for code results. Tool calling format compatible with OpenAI function calling API.",
+    "Create J.A.R.V.I.S_system/core/agents/researcher_agent.py - Inherits BaseAgent. Adds: research-focused system prompt emphasizing critical thinking, fact-based reasoning, academic analysis. No special tools beyond base (it's a reasoning/thinking agent). Prompt engineering for: considering pros/cons, citing limitations, structured arguments.",
+    "Create J.A.R.V.I.S_system/core/orchestrator.py - Main Orchestrator class that: receives user input, uses ModelRouter to classify task difficulty, selects appropriate agent (coder for code tasks, researcher for analysis/research, direct LLM for simple queries), manages ConversationMemory across turns, executes the selected agent with the right provider/model, returns formatted results. Personality: JARVIS-like calm, helpful, honest, never lies. If unsure says 'Saya tidak yakin'.",
+    "Create J.A.R.V.I.S_system/run_jarvis_v2.py - Interactive REPL entry point with: welcome banner (using rich library for beautiful output), special commands (help, tools, clear, exit/quit, status), status command shows provider availability, displays which model/provider is being used for each response, graceful error handling (KeyboardInterrupt, unexpected errors), loads .env file on startup, main() function as entry point."
+  ],
+  "acceptance_criteria": [
+    "All new files have proper Python 3.8+ syntax with type hints",
+    "All modules import without errors",
+    "BaseAgent tool calling infrastructure can register callables and invoke them by name",
+    "CoderAgent has file_tools and python_executor registered",
+    "ResearcherAgent instantiates cleanly with its specialized prompt",
+    "Orchestrator correctly routes: simple greetings to small model, code tasks to coder_agent, research questions to researcher_agent",
+    "run_jarvis_v2.py handles all special commands (help, tools, clear, exit, status) without crashing",
+    "The system handles missing Ollama gracefully (falls back to Groq or shows informative message)",
+    "The system handles missing GROQ_API_KEY gracefully (falls back to Ollama or shows informative message)",
+    "All code is well-commented with Indonesian comments for logic and English docstrings"
+  ],
+  "verification": [
+    "Run: python -m py_compile on every .py file in core/agents/, core/orchestrator.py, and run_jarvis_v2.py",
+    "Run: python -c to import orchestrator, all agents, verify no import errors",
+    "Run: python run_jarvis_v2.py with piped input 'exit' to verify it starts and exits cleanly",
+    "Run a smoke test that instantiates Orchestrator and verifies routing logic without actual LLM calls"
+  ],
+  "blocked_reason": null,
+  "findings": "All 6 files created and verified. py_compile passes on all files. Full import chain works from repo root. Task classification routing verified: greetings->simple, code tasks->code, research->research. CoderAgent has 6 tools registered in OpenAI function calling format. REPL handles all special commands (help, tools, status, clear, exit/quit/q) without crashing. System gracefully reports when no providers are available. Used python3 (not python) per FEAT-001 findings. The self-healing loop uses text-based tool calling format [TOOL_CALL]...[/TOOL_CALL] as a universal fallback that works with all providers regardless of native function calling support."
+}

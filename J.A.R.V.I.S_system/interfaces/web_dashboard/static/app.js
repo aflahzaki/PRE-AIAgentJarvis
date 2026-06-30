@@ -1,0 +1,1436 @@
+/**
+ * J.A.R.V.I.S Web Dashboard - Frontend Application
+ *
+ * Vanilla JavaScript SPA handling navigation, API calls,
+ * and dynamic content rendering for all dashboard sections.
+ */
+
+(function () {
+    'use strict';
+
+    // ============================================
+    // Authentication
+    // ============================================
+
+    var authToken = localStorage.getItem('jarvis_auth_token') || '';
+
+    function showLoginModal() {
+        var modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+
+    function hideLoginModal() {
+        var modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    window.doLogin = function () {
+        var tokenInput = document.getElementById('login-token');
+        var token = tokenInput ? tokenInput.value.trim() : '';
+        if (!token) return;
+
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token }),
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    throw new Error('Invalid token');
+                }
+                return resp.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('jarvis_auth_token', authToken);
+                    hideLoginModal();
+                    // Clear error message
+                    var errorEl = document.getElementById('login-error');
+                    if (errorEl) errorEl.textContent = '';
+                }
+            })
+            .catch(function (err) {
+                var errorEl = document.getElementById('login-error');
+                if (errorEl) errorEl.textContent = 'Invalid token. Please try again.';
+            });
+    };
+
+    // ============================================
+    // API Wrapper
+    // ============================================
+
+    const API_BASE = '/api';
+
+    async function apiFetch(endpoint, options = {}) {
+        const url = API_BASE + endpoint;
+        const config = {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken,
+                ...(options.headers || {}),
+            },
+        };
+
+        try {
+            const response = await fetch(url, config);
+
+            if (response.status === 401) {
+                showLoginModal();
+                throw new Error('Unauthorized');
+            }
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Request failed with status ' + response.status);
+            }
+
+            return data;
+        } catch (error) {
+            console.error('API Error:', endpoint, error);
+            throw error;
+        }
+    }
+
+    // ============================================
+    // API Fetch with Retry (Exponential Backoff)
+    // ============================================
+
+    /**
+     * Wrapper around apiFetch that retries on failure with exponential backoff.
+     *
+     * @param {string} endpoint - API endpoint path.
+     * @param {object} options - Fetch options.
+     * @param {number} retries - Max number of retries (default: 2).
+     * @returns {Promise<object>} Parsed JSON response data.
+     */
+    async function apiFetchWithRetry(endpoint, options, retries) {
+        if (options === undefined) options = {};
+        if (retries === undefined) retries = 2;
+
+        for (var i = 0; i <= retries; i++) {
+            try {
+                var data = await apiFetch(endpoint, options);
+                return data;
+            } catch (e) {
+                if (i === retries) throw e;
+                // Exponential backoff: 1s, 2s, ...
+                await new Promise(function (r) { setTimeout(r, 1000 * (i + 1)); });
+            }
+        }
+    }
+
+    // ============================================
+    // Toast Notifications
+    // ============================================
+
+    /**
+     * Show a toast notification at top-right that auto-dismisses after 5s.
+     *
+     * @param {string} message - The toast message text.
+     * @param {string} type - One of 'error', 'success', 'warning'.
+     */
+    function showToast(message, type) {
+        if (!type) type = 'error';
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+
+        var msgSpan = document.createElement('span');
+        msgSpan.textContent = message;
+        toast.appendChild(msgSpan);
+
+        var dismissBtn = document.createElement('button');
+        dismissBtn.className = 'toast-dismiss';
+        dismissBtn.textContent = '\u00D7';
+        dismissBtn.addEventListener('click', function () {
+            dismissToast(toast);
+        });
+        toast.appendChild(dismissBtn);
+
+        container.appendChild(toast);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(function () {
+            dismissToast(toast);
+        }, 5000);
+    }
+
+    function dismissToast(toast) {
+        if (!toast || !toast.parentNode) return;
+        toast.classList.add('toast-exit');
+        setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }
+
+    // ============================================
+    // Connection Monitoring
+    // ============================================
+
+    var _connectionOnline = true;
+    var _connectionCheckInterval = null;
+
+    /**
+     * Start periodic connection checks by pinging /api/status.
+     * Shows offline banner when disconnected.
+     */
+    function startConnectionMonitor() {
+        _connectionCheckInterval = setInterval(async function () {
+            try {
+                var response = await fetch(API_BASE + '/status', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + authToken },
+                });
+                if (response.ok || response.status === 401) {
+                    if (!_connectionOnline) {
+                        _connectionOnline = true;
+                        hideOfflineBanner();
+                        showToast('Connection restored', 'success');
+                    }
+                } else {
+                    setOffline();
+                }
+            } catch (e) {
+                setOffline();
+            }
+        }, 30000); // Check every 30 seconds
+    }
+
+    function setOffline() {
+        if (_connectionOnline) {
+            _connectionOnline = false;
+            showOfflineBanner();
+        }
+    }
+
+    function showOfflineBanner() {
+        var banner = document.getElementById('offline-banner');
+        if (banner) banner.classList.add('visible');
+    }
+
+    function hideOfflineBanner() {
+        var banner = document.getElementById('offline-banner');
+        if (banner) banner.classList.remove('visible');
+    }
+
+    // Start connection monitoring
+    startConnectionMonitor();
+
+    // ============================================
+    // Loading Skeletons
+    // ============================================
+
+    /**
+     * Generate HTML for skeleton loading placeholders.
+     *
+     * @param {number} count - Number of skeleton cards to show.
+     * @returns {string} HTML for skeleton loading state.
+     */
+    function renderSkeletonLoading(count) {
+        if (!count) count = 3;
+        var html = '';
+        for (var i = 0; i < count; i++) {
+            html += '<div class="skeleton-card">';
+            html += '<div class="skeleton skeleton-line skeleton-line-medium"></div>';
+            html += '<div class="skeleton skeleton-line skeleton-line-full"></div>';
+            html += '<div class="skeleton skeleton-line skeleton-line-short"></div>';
+            html += '</div>';
+        }
+        return html;
+    }
+
+    // ============================================
+    // Keyboard Shortcuts
+    // ============================================
+
+    document.addEventListener('keydown', function (e) {
+        // Ctrl+K: Focus chat input
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            var chatInputEl = document.getElementById('chat-input');
+            if (chatInputEl) chatInputEl.focus();
+            // Also navigate to chat section
+            navigateTo('chat');
+        }
+
+        // Escape: Close modals and shortcuts hint
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
+
+        // Ctrl+Enter: Send message (only if chat input is focused)
+        if (e.ctrlKey && e.key === 'Enter') {
+            var activeEl = document.activeElement;
+            var chatInputEl2 = document.getElementById('chat-input');
+            if (activeEl === chatInputEl2 && chatInputEl2.value.trim()) {
+                e.preventDefault();
+                var chatFormEl = document.getElementById('chat-form');
+                if (chatFormEl) {
+                    chatFormEl.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        }
+
+        // ? key: Toggle shortcuts hint (only if not typing in an input)
+        if (e.key === '?' && !isTypingInInput()) {
+            toggleShortcutsHint();
+        }
+    });
+
+    function isTypingInInput() {
+        var active = document.activeElement;
+        if (!active) return false;
+        var tag = active.tagName.toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select';
+    }
+
+    function closeAllModals() {
+        // Close login modal
+        hideLoginModal();
+        // Close shortcuts hint
+        var hint = document.getElementById('shortcuts-hint');
+        if (hint) hint.style.display = 'none';
+    }
+
+    function toggleShortcutsHint() {
+        var hint = document.getElementById('shortcuts-hint');
+        if (!hint) return;
+        hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ============================================
+    // Router - Section Navigation
+    // ============================================
+
+    const navItems = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('.content-section');
+
+    function navigateTo(sectionId) {
+        // Hide all sections
+        sections.forEach(function (sec) {
+            sec.classList.remove('active');
+        });
+
+        // Deactivate all nav items
+        navItems.forEach(function (item) {
+            item.classList.remove('active');
+        });
+
+        // Show target section
+        var target = document.getElementById('section-' + sectionId);
+        if (target) {
+            target.classList.add('active');
+        }
+
+        // Activate nav item
+        var navItem = document.querySelector('.nav-item[data-section="' + sectionId + '"]');
+        if (navItem) {
+            navItem.classList.add('active');
+        }
+
+        // Load data for the section
+        loadSectionData(sectionId);
+    }
+
+    navItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            var section = this.getAttribute('data-section');
+            navigateTo(section);
+        });
+    });
+
+    function loadSectionData(section) {
+        switch (section) {
+            case 'tasks':
+                loadTasks();
+                break;
+            case 'knowledge':
+                loadKnowledge();
+                break;
+            case 'journal':
+                loadJournals();
+                break;
+            case 'habits':
+                loadHabits();
+                break;
+            case 'status':
+                loadStatus();
+                break;
+            case 'analytics':
+                loadAnalytics();
+                break;
+        }
+    }
+
+    // ============================================
+    // Chat Section
+    // ============================================
+
+    var chatForm = document.getElementById('chat-form');
+    var chatInput = document.getElementById('chat-input');
+    var chatMessages = document.getElementById('chat-messages');
+    var typingIndicator = document.getElementById('typing-indicator');
+    var _lastSentMessage = '';
+
+    /**
+     * Send a message using streaming SSE endpoint.
+     * Tokens are appended to the message bubble in real-time.
+     * Falls back to non-streaming on error.
+     *
+     * @param {string} message - The user message to send.
+     */
+    async function sendMessageStreaming(message) {
+        // Track last sent message for retry
+        _lastSentMessage = message;
+
+        // Add user message
+        appendMessage('user', message);
+        chatInput.value = '';
+
+        // Show typing indicator
+        typingIndicator.style.display = 'flex';
+        scrollChatToBottom();
+
+        try {
+            var response = await fetch(API_BASE + '/chat/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken,
+                },
+                body: JSON.stringify({ message: message }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Stream request failed with status ' + response.status);
+            }
+
+            typingIndicator.style.display = 'none';
+
+            // Create assistant message bubble for streaming content
+            var div = document.createElement('div');
+            div.className = 'message assistant';
+            var html = '<div class="message-avatar">J</div>';
+            html += '<div class="message-content"><p></p></div>';
+            div.innerHTML = html;
+            chatMessages.appendChild(div);
+            var contentEl = div.querySelector('.message-content p');
+
+            // Read the stream
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            var fullResponse = '';
+
+            while (true) {
+                var result = await reader.read();
+                if (result.done) break;
+
+                buffer += decoder.decode(result.value, { stream: true });
+
+                // Process complete SSE lines
+                var lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line.indexOf('data: ') === 0) {
+                        var data = line.substring(6);
+                        if (data === '[DONE]') {
+                            // Stream complete
+                            break;
+                        }
+                        try {
+                            var token = JSON.parse(data);
+                            fullResponse += token;
+                        } catch (parseErr) {
+                            // Fallback: use raw data if JSON parse fails
+                            fullResponse += data;
+                        }
+                        contentEl.textContent = fullResponse;
+                        scrollChatToBottom();
+                    }
+                }
+            }
+
+            // If no content was received, show a fallback message
+            if (!fullResponse) {
+                contentEl.textContent = 'No response received.';
+            }
+        } catch (error) {
+            // Fallback to non-streaming on any error
+            typingIndicator.style.display = 'none';
+            console.error('Streaming failed, falling back:', error);
+
+            try {
+                var data = await apiFetch('/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({ message: message }),
+                });
+
+                var meta = '';
+                if (data.model) {
+                    meta = data.provider + ' / ' + data.model;
+                    if (data.task_type) meta += ' [' + data.task_type + ']';
+                }
+
+                appendMessage('assistant', data.response, meta);
+            } catch (fallbackError) {
+                // Show error bubble with retry button
+                appendErrorMessage('Failed to send message: ' + fallbackError.message);
+                showToast('Message failed. Click Retry to try again.', 'error');
+            }
+        }
+    }
+
+    chatForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var message = chatInput.value.trim();
+        if (!message) return;
+
+        // Use streaming version
+        sendMessageStreaming(message);
+    });
+
+    // Export button handler
+    var exportBtn = document.getElementById('btn-export-chat');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+            // Download conversation as markdown file
+            var url = API_BASE + '/chat/export?format=md';
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'jarvis_conversation.md';
+            // Add auth header via fetch and trigger download
+            fetch(url, {
+                headers: {
+                    'Authorization': 'Bearer ' + authToken,
+                },
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Export failed with status ' + response.status);
+                    }
+                    return response.blob();
+                })
+                .then(function (blob) {
+                    var downloadUrl = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'jarvis_conversation.md';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(downloadUrl);
+                })
+                .catch(function (err) {
+                    console.error('Export error:', err);
+                    alert('Failed to export conversation: ' + err.message);
+                });
+        });
+    }
+
+    function appendMessage(role, content, meta) {
+        var div = document.createElement('div');
+        div.className = 'message ' + role;
+
+        var avatar = role === 'assistant' ? 'J' : 'U';
+        var html = '<div class="message-avatar">' + avatar + '</div>';
+        html += '<div class="message-content">';
+        html += '<p>' + escapeHtml(content) + '</p>';
+        if (meta) {
+            html += '<div class="message-meta">' + escapeHtml(meta) + '</div>';
+        }
+        html += '</div>';
+
+        div.innerHTML = html;
+        chatMessages.appendChild(div);
+        scrollChatToBottom();
+    }
+
+    /**
+     * Append an error message with a retry button in the chat.
+     *
+     * @param {string} errorText - The error message to display.
+     */
+    function appendErrorMessage(errorText) {
+        var div = document.createElement('div');
+        div.className = 'message error';
+
+        var html = '<div class="message-avatar">!</div>';
+        html += '<div class="message-content">';
+        html += '<p>' + escapeHtml(errorText) + '</p>';
+        html += '<button class="btn-retry">Retry</button>';
+        html += '</div>';
+
+        div.innerHTML = html;
+        chatMessages.appendChild(div);
+
+        // Attach retry handler
+        var retryBtn = div.querySelector('.btn-retry');
+        retryBtn.addEventListener('click', function () {
+            // Remove the error message
+            if (div.parentNode) div.parentNode.removeChild(div);
+            // Re-send the last message
+            if (_lastSentMessage) {
+                sendMessageStreaming(_lastSentMessage);
+            }
+        });
+
+        scrollChatToBottom();
+    }
+
+    function scrollChatToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // ============================================
+    // Tasks Section
+    // ============================================
+
+    var taskForm = document.getElementById('task-form');
+    var taskFilterStatus = document.getElementById('task-filter-status');
+    var taskFilterCategory = document.getElementById('task-filter-category');
+
+    document.getElementById('btn-add-task').addEventListener('click', toggleTaskForm);
+
+    taskFilterStatus.addEventListener('change', loadTasks);
+    taskFilterCategory.addEventListener('change', loadTasks);
+
+    taskForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var title = document.getElementById('task-title').value.trim();
+        if (!title) return;
+
+        var body = {
+            title: title,
+            description: document.getElementById('task-description').value.trim() || null,
+            priority: document.getElementById('task-priority').value,
+            category: document.getElementById('task-category').value.trim() || null,
+            due_date: document.getElementById('task-due-date').value || null,
+        };
+
+        try {
+            await apiFetch('/tasks', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            taskForm.reset();
+            toggleTaskForm();
+            showToast('Task created!', 'success');
+            loadTasks();
+        } catch (error) {
+            showToast('Error creating task: ' + error.message, 'error');
+        }
+    });
+
+    async function loadTasks() {
+        var container = document.getElementById('tasks-list');
+        var status = taskFilterStatus.value;
+        var category = taskFilterCategory.value;
+
+        var query = '';
+        if (status) query += '?status=' + encodeURIComponent(status);
+        if (category) query += (query ? '&' : '?') + 'category=' + encodeURIComponent(category);
+
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
+        try {
+            var data = await apiFetchWithRetry('/tasks' + query);
+            var tasks = data.tasks || [];
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No tasks found.</p></div>';
+                return;
+            }
+
+            var html = '';
+            tasks.forEach(function (task) {
+                html += renderTaskCard(task);
+            });
+            container.innerHTML = html;
+
+            // Attach event handlers for task actions
+            container.querySelectorAll('.task-complete-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    completeTask(this.getAttribute('data-id'));
+                });
+            });
+            container.querySelectorAll('.task-delete-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    deleteTask(this.getAttribute('data-id'));
+                });
+            });
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading tasks: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load tasks', 'error');
+        }
+    }
+
+    function renderTaskCard(task) {
+        var statusBadge = '<span class="badge badge-' + task.status + '">' + task.status + '</span>';
+        var priorityBadge = '<span class="badge badge-' + task.priority + '">' + task.priority + '</span>';
+
+        var html = '<div class="item-card">';
+        html += '<div class="item-info">';
+        html += '<div class="item-title">' + escapeHtml(task.title) + '</div>';
+        if (task.description) {
+            html += '<div class="item-description">' + escapeHtml(task.description) + '</div>';
+        }
+        html += '<div class="item-meta">' + statusBadge + ' ' + priorityBadge;
+        if (task.category) html += ' <span>' + escapeHtml(task.category) + '</span>';
+        if (task.due_date) html += ' <span>Due: ' + task.due_date.split('T')[0] + '</span>';
+        html += '</div></div>';
+        html += '<div class="item-actions">';
+        if (task.status !== 'completed') {
+            html += '<button class="btn-success task-complete-btn" data-id="' + task.id + '">Done</button>';
+        }
+        html += '<button class="btn-danger task-delete-btn" data-id="' + task.id + '">Delete</button>';
+        html += '</div></div>';
+        return html;
+    }
+
+    async function completeTask(taskId) {
+        try {
+            await apiFetch('/tasks/' + taskId, {
+                method: 'PUT',
+                body: JSON.stringify({ status: 'completed' }),
+            });
+            showToast('Task completed!', 'success');
+            loadTasks();
+        } catch (error) {
+            showToast('Error completing task: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteTask(taskId) {
+        if (!confirm('Delete this task?')) return;
+        try {
+            await apiFetch('/tasks/' + taskId, { method: 'DELETE' });
+            showToast('Task deleted', 'success');
+            loadTasks();
+        } catch (error) {
+            showToast('Error deleting task: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================
+    // Knowledge Section
+    // ============================================
+
+    var knowledgeForm = document.getElementById('knowledge-form');
+    var knowledgeSearch = document.getElementById('knowledge-search');
+
+    document.getElementById('btn-add-knowledge').addEventListener('click', toggleKnowledgeForm);
+    document.getElementById('btn-search-knowledge').addEventListener('click', searchKnowledge);
+
+    knowledgeSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') searchKnowledge();
+    });
+
+    knowledgeForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var title = document.getElementById('knowledge-title').value.trim();
+        var content = document.getElementById('knowledge-content').value.trim();
+        if (!title || !content) return;
+
+        var body = {
+            title: title,
+            content: content,
+            category: document.getElementById('knowledge-category').value.trim() || null,
+            tags: document.getElementById('knowledge-tags').value.trim() || null,
+            source: document.getElementById('knowledge-source').value.trim() || null,
+        };
+
+        try {
+            await apiFetch('/knowledge', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            knowledgeForm.reset();
+            toggleKnowledgeForm();
+            showToast('Knowledge added!', 'success');
+            loadKnowledge();
+        } catch (error) {
+            showToast('Error adding knowledge: ' + error.message, 'error');
+        }
+    });
+
+    // ============================================
+    // Knowledge File Upload
+    // ============================================
+
+    var uploadArea = document.getElementById('upload-area');
+    var fileInput = document.getElementById('file-upload');
+    var uploadProgress = document.getElementById('upload-progress');
+    var uploadProgressBar = document.getElementById('upload-progress-bar');
+    var uploadProgressText = document.getElementById('upload-progress-text');
+    var uploadResults = document.getElementById('upload-results');
+
+    // Click to trigger file input
+    uploadArea.addEventListener('click', function (e) {
+        if (e.target === fileInput) return;
+        fileInput.click();
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+            handleFileUpload(this.files);
+        }
+    });
+
+    // Drag & drop handlers
+    uploadArea.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('drag-over');
+
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files);
+        }
+    });
+
+    /**
+     * Handle file upload for one or more files.
+     *
+     * @param {FileList} files - The files to upload.
+     */
+    async function handleFileUpload(files) {
+        var totalFiles = files.length;
+        var completed = 0;
+        var results = [];
+
+        // Show progress
+        uploadProgress.style.display = 'block';
+        uploadResults.innerHTML = '';
+        uploadProgressBar.style.width = '0%';
+        uploadProgressText.textContent = 'Uploading 0/' + totalFiles + ' files...';
+
+        for (var i = 0; i < totalFiles; i++) {
+            var file = files[i];
+
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                results.push({ filename: file.name, success: false, error: 'File too large (max 10MB)' });
+                completed++;
+                updateUploadProgress(completed, totalFiles);
+                continue;
+            }
+
+            try {
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('category', 'uploaded');
+                formData.append('tags', '');
+
+                var response = await fetch(API_BASE + '/knowledge/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                    },
+                    body: formData,
+                });
+
+                var data = await response.json();
+
+                if (response.ok && data.success) {
+                    results.push({
+                        filename: file.name,
+                        success: true,
+                        entries: data.entries_created,
+                    });
+                } else {
+                    results.push({
+                        filename: file.name,
+                        success: false,
+                        error: data.detail || data.error || 'Upload failed',
+                    });
+                }
+            } catch (error) {
+                results.push({
+                    filename: file.name,
+                    success: false,
+                    error: error.message || 'Network error',
+                });
+            }
+
+            completed++;
+            updateUploadProgress(completed, totalFiles);
+        }
+
+        // Show results
+        showUploadResults(results);
+
+        // Reset file input
+        fileInput.value = '';
+
+        // Reload knowledge list after upload
+        setTimeout(loadKnowledge, 500);
+    }
+
+    function updateUploadProgress(completed, total) {
+        var pct = Math.round((completed / total) * 100);
+        uploadProgressBar.style.width = pct + '%';
+        uploadProgressText.textContent = 'Uploading ' + completed + '/' + total + ' files...';
+        if (completed >= total) {
+            uploadProgressText.textContent = 'Upload complete!';
+        }
+    }
+
+    function showUploadResults(results) {
+        var html = '';
+        results.forEach(function (r) {
+            if (r.success) {
+                html += '<div class="upload-result-item success">';
+                html += '<span>' + escapeHtml(r.filename) + '</span>';
+                html += '<span class="badge badge-completed">' + r.entries + ' entries created</span>';
+                html += '</div>';
+            } else {
+                html += '<div class="upload-result-item error">';
+                html += '<span>' + escapeHtml(r.filename) + '</span>';
+                html += '<span class="badge badge-urgent">' + escapeHtml(r.error) + '</span>';
+                html += '</div>';
+            }
+        });
+        uploadResults.innerHTML = html;
+
+        // Auto-hide progress after 5 seconds
+        setTimeout(function () {
+            uploadProgress.style.display = 'none';
+            uploadResults.innerHTML = '';
+        }, 5000);
+    }
+
+    async function loadKnowledge() {
+        var container = document.getElementById('knowledge-list');
+
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
+        try {
+            var data = await apiFetchWithRetry('/knowledge');
+            var items = data.knowledge || [];
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No knowledge entries yet.</p></div>';
+                return;
+            }
+
+            var html = '';
+            items.forEach(function (item) {
+                html += renderKnowledgeCard(item);
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading knowledge: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load knowledge base', 'error');
+        }
+    }
+
+    async function searchKnowledge() {
+        var query = knowledgeSearch.value.trim();
+        if (!query) {
+            loadKnowledge();
+            return;
+        }
+
+        var container = document.getElementById('knowledge-list');
+        try {
+            var data = await apiFetch('/knowledge/search?q=' + encodeURIComponent(query));
+            var items = data.results || [];
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No results for "' + escapeHtml(query) + '"</p></div>';
+                return;
+            }
+
+            var html = '';
+            items.forEach(function (item) {
+                html += renderKnowledgeCard(item);
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state"><p>Search error: ' + escapeHtml(error.message) + '</p></div>';
+        }
+    }
+
+    function renderKnowledgeCard(item) {
+        var html = '<div class="item-card">';
+        html += '<div class="item-info">';
+        html += '<div class="item-title">' + escapeHtml(item.title) + '</div>';
+        if (item.content) {
+            var preview = item.content.length > 200 ? item.content.substring(0, 200) + '...' : item.content;
+            html += '<div class="item-description">' + escapeHtml(preview) + '</div>';
+        }
+        html += '<div class="item-meta">';
+        if (item.category) html += '<span class="badge badge-medium">' + escapeHtml(item.category) + '</span>';
+        if (item.tags) html += '<span>' + escapeHtml(item.tags) + '</span>';
+        if (item.source) html += '<span>' + escapeHtml(item.source) + '</span>';
+        html += '</div></div></div>';
+        return html;
+    }
+
+    // ============================================
+    // Journal Section
+    // ============================================
+
+    var journalForm = document.getElementById('journal-form');
+
+    // Set default date to today
+    document.getElementById('journal-date').value = new Date().toISOString().split('T')[0];
+
+    journalForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var content = document.getElementById('journal-content').value.trim();
+        if (!content) return;
+
+        var body = {
+            date: document.getElementById('journal-date').value,
+            mood: document.getElementById('journal-mood').value || null,
+            content: content,
+            highlights: document.getElementById('journal-highlights').value.trim() || null,
+            challenges: document.getElementById('journal-challenges').value.trim() || null,
+            tomorrow_plan: document.getElementById('journal-tomorrow').value.trim() || null,
+        };
+
+        try {
+            await apiFetch('/journals', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            journalForm.reset();
+            document.getElementById('journal-date').value = new Date().toISOString().split('T')[0];
+            showToast('Journal entry saved!', 'success');
+            loadJournals();
+        } catch (error) {
+            showToast('Error saving journal: ' + error.message, 'error');
+        }
+    });
+
+    async function loadJournals() {
+        var container = document.getElementById('journals-list');
+        try {
+            var data = await apiFetch('/journals');
+            var journals = data.journals || [];
+
+            if (journals.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No journal entries yet. Start writing!</p></div>';
+                return;
+            }
+
+            var html = '';
+            journals.forEach(function (journal) {
+                html += renderJournalCard(journal);
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading journals: ' + escapeHtml(error.message) + '</p></div>';
+        }
+    }
+
+    function renderJournalCard(journal) {
+        var moodClass = journal.mood ? 'mood-' + journal.mood : '';
+        var html = '<div class="item-card">';
+        html += '<div class="item-info">';
+        html += '<div class="item-title">' + (journal.date || 'Unknown date');
+        if (journal.mood) {
+            html += ' <span class="' + moodClass + '">(' + journal.mood + ')</span>';
+        }
+        html += '</div>';
+        html += '<div class="item-description">' + escapeHtml(journal.content) + '</div>';
+        html += '<div class="item-meta">';
+        if (journal.highlights) html += '<span>Highlights: ' + escapeHtml(journal.highlights.substring(0, 50)) + '</span>';
+        if (journal.challenges) html += '<span>Challenges: ' + escapeHtml(journal.challenges.substring(0, 50)) + '</span>';
+        html += '</div></div></div>';
+        return html;
+    }
+
+    // ============================================
+    // Habits Section
+    // ============================================
+
+    var habitForm = document.getElementById('habit-form');
+
+    document.getElementById('btn-add-habit').addEventListener('click', toggleHabitForm);
+
+    habitForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var name = document.getElementById('habit-name').value.trim();
+        if (!name) return;
+
+        var body = {
+            name: name,
+            frequency: document.getElementById('habit-frequency').value,
+            target_count: parseInt(document.getElementById('habit-target').value) || 1,
+        };
+
+        try {
+            await apiFetch('/habits', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            habitForm.reset();
+            toggleHabitForm();
+            showToast('Habit created!', 'success');
+            loadHabits();
+        } catch (error) {
+            showToast('Error creating habit: ' + error.message, 'error');
+        }
+    });
+
+    async function loadHabits() {
+        var container = document.getElementById('habits-list');
+
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
+        try {
+            var data = await apiFetchWithRetry('/habits');
+            var habits = data.habits || [];
+
+            if (habits.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No habits tracked yet. Create one!</p></div>';
+                return;
+            }
+
+            var html = '';
+            habits.forEach(function (habit) {
+                html += renderHabitCard(habit);
+            });
+            container.innerHTML = html;
+
+            // Attach log buttons
+            container.querySelectorAll('.habit-log-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    logHabit(this.getAttribute('data-id'));
+                });
+            });
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading habits: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load habits', 'error');
+        }
+    }
+
+    function renderHabitCard(habit) {
+        var today = new Date().toISOString().split('T')[0];
+        var loggedToday = false;
+        var logs = habit.recent_logs || [];
+
+        logs.forEach(function (log) {
+            if (log.logged_date === today) loggedToday = true;
+        });
+
+        var html = '<div class="habit-card">';
+        html += '<div class="habit-header">';
+        html += '<span class="habit-name">' + escapeHtml(habit.name) + '</span>';
+        html += '<span class="habit-freq">' + habit.frequency + ' (target: ' + habit.target_count + ')</span>';
+        html += '</div>';
+
+        // Show recent log dots (last 7 days)
+        html += '<div class="habit-logs">';
+        for (var i = 6; i >= 0; i--) {
+            var d = new Date();
+            d.setDate(d.getDate() - i);
+            var dateStr = d.toISOString().split('T')[0];
+            var completed = logs.some(function (log) { return log.logged_date === dateStr; });
+            var dayLabel = d.toLocaleDateString('en', { weekday: 'narrow' });
+            html += '<div class="habit-log-dot' + (completed ? ' completed' : '') + '" title="' + dateStr + '">' + dayLabel + '</div>';
+        }
+        html += '</div>';
+
+        html += '<div class="habit-actions">';
+        if (!loggedToday) {
+            html += '<button class="btn-success habit-log-btn" data-id="' + habit.id + '">Log Today</button>';
+        } else {
+            html += '<span class="badge badge-completed">Done today!</span>';
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    async function logHabit(habitId) {
+        try {
+            await apiFetch('/habits/' + habitId + '/log', {
+                method: 'POST',
+                body: JSON.stringify({ count: 1 }),
+            });
+            showToast('Habit logged!', 'success');
+            loadHabits();
+        } catch (error) {
+            showToast('Error logging habit: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================
+    // Status Section
+    // ============================================
+
+    async function loadStatus() {
+        var container = document.getElementById('status-panel');
+        try {
+            var data = await apiFetch('/status');
+            var html = '';
+
+            // System info card
+            html += '<div class="status-card">';
+            html += '<div class="status-card-title">System</div>';
+            html += '<div class="status-item"><span class="status-label">Name</span><span class="status-value">' + (data.system || 'J.A.R.V.I.S') + '</span></div>';
+            html += '<div class="status-item"><span class="status-label">Version</span><span class="status-value">' + (data.version || '2.0.0') + '</span></div>';
+            html += '</div>';
+
+            // Database card
+            if (data.database) {
+                html += '<div class="status-card">';
+                html += '<div class="status-card-title">Database</div>';
+                var dbOk = data.database.success;
+                html += '<div class="status-item"><span class="status-label">Status</span><span class="status-value ' + (dbOk ? 'online' : 'offline') + '">' + (dbOk ? 'Connected' : 'Disconnected') + '</span></div>';
+                if (data.database.db_type) {
+                    html += '<div class="status-item"><span class="status-label">Type</span><span class="status-value">' + data.database.db_type + '</span></div>';
+                }
+                if (data.database.error) {
+                    html += '<div class="status-item"><span class="status-label">Error</span><span class="status-value offline">' + escapeHtml(data.database.error) + '</span></div>';
+                }
+                html += '</div>';
+            }
+
+            // Orchestrator card
+            if (data.orchestrator) {
+                html += '<div class="status-card">';
+                html += '<div class="status-card-title">Orchestrator</div>';
+                if (data.orchestrator.error) {
+                    html += '<div class="status-item"><span class="status-label">Status</span><span class="status-value offline">' + escapeHtml(data.orchestrator.error) + '</span></div>';
+                } else {
+                    // Providers
+                    if (data.orchestrator.providers) {
+                        var providers = data.orchestrator.providers;
+                        Object.keys(providers).forEach(function (key) {
+                            var val = providers[key];
+                            var statusStr = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                            html += '<div class="status-item"><span class="status-label">' + escapeHtml(key) + '</span><span class="status-value">' + escapeHtml(statusStr) + '</span></div>';
+                        });
+                    }
+                    // Memory
+                    if (data.orchestrator.memory) {
+                        var memory = data.orchestrator.memory;
+                        Object.keys(memory).forEach(function (key) {
+                            html += '<div class="status-item"><span class="status-label">' + escapeHtml(key) + '</span><span class="status-value">' + escapeHtml(String(memory[key])) + '</span></div>';
+                        });
+                    }
+                }
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<div class="status-card"><div class="status-card-title">Error</div><p>' + escapeHtml(error.message) + '</p></div>';
+        }
+    }
+
+    // ============================================
+    // Analytics Section
+    // ============================================
+
+    /**
+     * Load analytics data from the API and render stats + charts.
+     */
+    async function loadAnalytics() {
+        try {
+            var [todayData, healthData] = await Promise.all([
+                apiFetch('/analytics/today').catch(function () { return {}; }),
+                apiFetch('/analytics/health').catch(function () { return {}; }),
+            ]);
+
+            renderAnalyticsStats(todayData);
+            renderAgentUsageChart(todayData.agent_usage || {});
+            renderProviderUsageChart(todayData.provider_usage || {});
+            renderHealthStatus(healthData);
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+        }
+    }
+
+    /**
+     * Render the top stats cards with today's data.
+     */
+    function renderAnalyticsStats(data) {
+        var reqEl = document.getElementById('stat-requests');
+        var rtEl = document.getElementById('stat-response-time');
+        var cacheEl = document.getElementById('stat-cache-rate');
+        var errorEl = document.getElementById('stat-error-rate');
+
+        if (reqEl) reqEl.textContent = data.total_requests || 0;
+        if (rtEl) rtEl.textContent = (data.avg_response_time_ms || 0) + 'ms';
+        if (cacheEl) cacheEl.textContent = (data.cache_hit_rate || 0) + '%';
+        if (errorEl) errorEl.textContent = (data.error_rate || 0) + '%';
+    }
+
+    /**
+     * Render a CSS bar chart for agent usage distribution.
+     */
+    function renderAgentUsageChart(agentUsage) {
+        var container = document.getElementById('chart-agent-usage');
+        if (!container) return;
+
+        var entries = Object.entries(agentUsage);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No data yet</p></div>';
+            return;
+        }
+
+        var total = entries.reduce(function (sum, entry) { return sum + entry[1]; }, 0);
+        var colors = ['#00bcd4', '#4caf50', '#ff9800', '#f44336', '#9c27b0', '#2196f3', '#ffeb3b', '#e91e63'];
+
+        var html = '';
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        entries.forEach(function (entry, idx) {
+            var name = entry[0];
+            var count = entry[1];
+            var pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            var color = colors[idx % colors.length];
+
+            html += '<div class="bar-chart-row">';
+            html += '<span class="bar-label">' + escapeHtml(name) + '</span>';
+            html += '<div class="bar-track">';
+            html += '<div class="bar-fill" style="width:' + pct + '%;background:' + color + ';"></div>';
+            html += '</div>';
+            html += '<span class="bar-value">' + count + ' (' + pct + '%)</span>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Render a CSS bar chart for provider usage distribution.
+     */
+    function renderProviderUsageChart(providerUsage) {
+        var container = document.getElementById('chart-provider-usage');
+        if (!container) return;
+
+        var entries = Object.entries(providerUsage);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No data yet</p></div>';
+            return;
+        }
+
+        var total = entries.reduce(function (sum, entry) { return sum + entry[1]; }, 0);
+        var colors = ['#2196f3', '#4caf50', '#ff9800', '#9c27b0', '#00bcd4', '#f44336'];
+
+        var html = '';
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        entries.forEach(function (entry, idx) {
+            var name = entry[0];
+            var count = entry[1];
+            var pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            var color = colors[idx % colors.length];
+
+            html += '<div class="bar-chart-row">';
+            html += '<span class="bar-label">' + escapeHtml(name) + '</span>';
+            html += '<div class="bar-track">';
+            html += '<div class="bar-fill" style="width:' + pct + '%;background:' + color + ';"></div>';
+            html += '</div>';
+            html += '<span class="bar-value">' + count + ' (' + pct + '%)</span>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Render provider health status indicators.
+     */
+    function renderHealthStatus(healthData) {
+        var container = document.getElementById('health-status-panel');
+        if (!container) return;
+
+        var providers = healthData.providers || {};
+        var uptime = healthData.uptime || {};
+        var entries = Object.keys(providers);
+
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No health data available</p></div>';
+            return;
+        }
+
+        var html = '';
+        entries.forEach(function (name) {
+            var status = providers[name] || {};
+            var uptimeInfo = uptime[name] || {};
+            var available = status.available;
+            var statusClass = available === true ? 'health-online' : (available === false ? 'health-offline' : 'health-unknown');
+            var statusText = available === true ? 'Online' : (available === false ? 'Offline' : 'Unknown');
+            var uptimePct = uptimeInfo.uptime_percent !== undefined ? uptimeInfo.uptime_percent + '%' : 'N/A';
+
+            html += '<div class="health-item">';
+            html += '<div class="health-indicator ' + statusClass + '"></div>';
+            html += '<div class="health-info">';
+            html += '<span class="health-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="health-status-text">' + statusText + '</span>';
+            html += '</div>';
+            html += '<div class="health-uptime">Uptime: ' + uptimePct + '</div>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    // ============================================
+    // Toggle Functions (global for inline onclick)
+    // ============================================
+
+    window.toggleTaskForm = function () {
+        var container = document.getElementById('task-form-container');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    };
+
+    window.toggleKnowledgeForm = function () {
+        var container = document.getElementById('knowledge-form-container');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    };
+
+    window.toggleHabitForm = function () {
+        var container = document.getElementById('habit-form-container');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // ============================================
+    // Utilities
+    // ============================================
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ============================================
+    // Initialization
+    // ============================================
+
+    // Chat section is active by default, no data load needed on start
+
+})();

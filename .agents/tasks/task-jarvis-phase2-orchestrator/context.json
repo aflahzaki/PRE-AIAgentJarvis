@@ -1,0 +1,20 @@
+{
+  "project_type": "Python AI Agent System - Multi-agent orchestrator with multi-provider LLM support",
+  "language": "Python",
+  "build_system": "pip with requirements.txt, no Makefile or complex build system",
+  "test_framework": "No formal test framework in place. Manual testing via REPL interaction.",
+  "build_command": "pip install -r J.A.R.V.I.S_system/requirements_v2.txt",
+  "test_command": "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from core import orchestrator, model_router; from core.providers import ollama_provider, groq_provider; from core.agents import coder_agent, researcher_agent; from core.memory import conversation; from core.tools import file_tools, python_executor; print('All imports OK')\"",
+  "verification_instructions": "1. Install requirements_v2.txt. 2. Verify all modules import cleanly without errors. 3. Run python -m py_compile on each .py file to verify syntax. 4. Run run_jarvis_v2.py with --help or quick exit to verify entry point works.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -r J.A.R.V.I.S_system/requirements_v2.txt",
+  "environment_constraints": "Python 3.9.25 in sandbox. Code must be Python 3.8+ compatible. Target hardware: Windows, AMD Ryzen 5 5500U (CPU only inference), 16GB RAM. Ollama may not be installed in sandbox - code must handle graceful fallback. No GPU available.",
+  "contribution_requirements": "Comments in Bahasa Indonesia for non-technical explanations, English for docstrings. Type hints required. Production quality code with proper error handling. Must work offline with Ollama and online with Groq independently.",
+  "key_patterns": "Current code uses Phidata framework with Nvidia NIM API. New code replaces this with raw OpenAI SDK for multi-provider compatibility. Interactive REPL pattern with special commands (help, tools, clear, exit). Self-healing loop pattern for autonomous coding. File tools and Python executor are core capabilities.",
+  "relevant_files": [
+    "J.A.R.V.I.S_system/jarvis_coder.py",
+    "J.A.R.V.I.S_system/run_jarvis.py",
+    "J.A.R.V.I.S_system/requirements.txt"
+  ],
+  "directory_structure": "PRE-AIAgentJarvis/ is the repo root. J.A.R.V.I.S_system/ contains the main agent code. New code goes in J.A.R.V.I.S_system/core/ subfolder. Old files remain untouched."
+}
