@@ -19,7 +19,7 @@ Features:
 
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 from core.agents.coder_agent import CoderAgent
 from core.agents.researcher_agent import ResearcherAgent
@@ -561,6 +561,87 @@ class Orchestrator:
             "provider": route.provider.name,
             "difficulty": route.difficulty.value,
         }
+
+    def process_stream(self, user_input: str) -> Generator[str, None, None]:
+        """Process user input with streaming token output.
+
+        For simple tasks, streams tokens directly from the provider using
+        stream_chat_completion(). For agent-based tasks (code, research, etc.),
+        falls back to the non-streaming process() method and yields the full
+        response as a single chunk.
+
+        Includes error handling that falls back to non-streaming process()
+        if streaming fails for any reason.
+
+        Args:
+            user_input: The user's input text.
+
+        Yields:
+            String tokens as they are generated.
+        """
+        try:
+            # Step 1: Classify task
+            task_type = self.classify_task(user_input)
+
+            # Step 2: Route to appropriate model
+            route = self.router.route(user_input)
+
+            logger.info(
+                "Streaming: task_type=%s, difficulty=%s, provider=%s, model=%s",
+                task_type, route.difficulty.value, route.provider.name, route.model,
+            )
+
+            if task_type == "simple":
+                # Stream directly from provider for simple tasks
+                system_prompt = (
+                    "You are J.A.R.V.I.S, a calm, helpful, and honest AI assistant.\n\n"
+                    "Core traits:\n"
+                    "- Jujur: Jika tidak tahu, katakan 'Saya tidak yakin' - jangan mengarang\n"
+                    "- Helpful: Berikan jawaban yang ringkas dan berguna\n"
+                    "- Humble: Akui keterbatasan dengan jujur\n\n"
+                    "Respond naturally and concisely. Use Indonesian or English depending "
+                    "on the user's language."
+                )
+
+                messages = [{"role": "system", "content": system_prompt}]
+
+                # Add context from memory
+                history = self.memory.get_messages(include_summary=True)
+                recent = history[-6:] if len(history) > 6 else history
+                messages.extend(recent)
+
+                # Current user message
+                messages.append({"role": "user", "content": user_input})
+
+                # Stream tokens from provider
+                full_response = ""
+                for token in route.provider.stream_chat_completion(
+                    messages=messages,
+                    model=route.model,
+                    temperature=0.7,
+                    max_tokens=1024,
+                ):
+                    full_response += token
+                    yield token
+
+                # Add to memory after streaming completes
+                self.memory.add_message("user", user_input)
+                self.memory.add_message("assistant", full_response)
+            else:
+                # Agent-based tasks: use non-streaming process and yield full response
+                result = self.process(user_input)
+                yield result["response"]
+
+        except Exception as e:
+            logger.warning(
+                "Streaming failed, falling back to non-streaming: %s", str(e)
+            )
+            # Fallback to non-streaming process
+            try:
+                result = self.process(user_input)
+                yield result["response"]
+            except Exception as fallback_error:
+                yield "Maaf, terjadi kesalahan: {}".format(str(fallback_error))
 
     def get_status(self) -> Dict[str, object]:
         """Get current system status including provider availability.

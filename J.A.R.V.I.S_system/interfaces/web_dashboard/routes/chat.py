@@ -3,12 +3,14 @@ Chat API Route - AI conversation endpoint.
 
 Provides POST /api/chat for sending messages to the J.A.R.V.I.S
 orchestrator and receiving AI-generated responses.
+Also provides POST /api/chat/stream for Server-Sent Events streaming.
 """
 
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -69,3 +71,43 @@ async def chat(request: ChatRequest):
             status_code=500,
             detail="Error processing message: {}".format(str(e)),
         )
+
+
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """Process a chat message with streaming response via Server-Sent Events.
+
+    Streams tokens from the orchestrator's process_stream() method as SSE
+    data events. Each token is sent as 'data: {token}\\n\\n'. The stream
+    ends with 'data: [DONE]\\n\\n'.
+
+    Args:
+        request: ChatRequest with the user message.
+
+    Returns:
+        StreamingResponse with text/event-stream media type.
+    """
+    from interfaces.web_dashboard.app import get_orchestrator
+
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    orchestrator = get_orchestrator()
+    if orchestrator is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Orchestrator not available. Please try again later.",
+        )
+
+    async def generate():
+        """Async generator that wraps the sync process_stream generator."""
+        try:
+            for token in orchestrator.process_stream(request.message.strip()):
+                yield "data: {}\n\n".format(token)
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error("Stream processing error: %s", str(e))
+            yield "data: Error: {}\n\n".format(str(e))
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

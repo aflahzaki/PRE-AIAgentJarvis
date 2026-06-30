@@ -285,8 +285,9 @@ class BaseAgent(ABC):
     ) -> ProviderResponse:
         """Call the provider, attempting function calling if tools are registered.
 
-        Falls back to text-based tool calling if the provider does not support
-        native function calling.
+        If the provider supports native function calling and tools are registered,
+        uses chat_completion_with_tools() for structured tool calls. Otherwise
+        falls back to text-based tool calling via regular chat_completion().
 
         Args:
             messages: Full message list for the API call.
@@ -294,9 +295,18 @@ class BaseAgent(ABC):
         Returns:
             ProviderResponse from the provider.
         """
-        # Coba panggil provider - implementasi standard tanpa tools di parameter
-        # karena BaseProvider hanya menerima messages, model, temperature, max_tokens
-        # Tool calling akan ditangani via text-based parsing
+        # Try native function calling if provider supports it and tools are registered
+        if self.provider.supports_function_calling() and self._tools:
+            response = self.provider.chat_completion_with_tools(
+                messages=messages,
+                model=self.model,
+                tools=self.get_tools_schema(),
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+            return response
+
+        # Fallback to standard chat completion (text-based tool calling)
         response = self.provider.chat_completion(
             messages=messages,
             model=self.model,
@@ -310,9 +320,18 @@ class BaseAgent(ABC):
 
         Process:
         1. Send message to LLM
-        2. Check if response contains tool calls
+        2. Check if response contains tool calls (native or text-based)
         3. Execute tools and feed results back
         4. Repeat until no more tool calls or max iterations reached
+
+        Native function calling path:
+        - If response.tool_calls is populated (from chat_completion_with_tools),
+          execute each tool and build proper OpenAI format messages (assistant
+          message with tool_calls, tool role messages with tool_call_id).
+
+        Text-based fallback path:
+        - If no native tool_calls, parse text for [TOOL_CALL] tags and handle
+          as before.
 
         Uses separate budgets for provider errors vs tool-call iterations:
         - provider_errors: transient failures (network, rate limit) - max 3
@@ -328,6 +347,7 @@ class BaseAgent(ABC):
         messages = self._build_messages(user_input)
 
         # Tambahkan instruksi tool calling jika ada tools terdaftar
+        # (needed for text-based fallback even when native function calling is used)
         if self._tools:
             tool_instruction = self._build_tool_instruction()
             # Sisipkan setelah system prompt
@@ -361,7 +381,53 @@ class BaseAgent(ABC):
 
             content = response.content
 
-            # Cek apakah ada tool calls dalam response
+            # --- Native function calling path ---
+            # Check if provider returned structured tool_calls
+            if response.tool_calls:
+                # Build assistant message with tool_calls metadata
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": content or "",
+                    "tool_calls": response.tool_calls,
+                }
+                messages.append(assistant_msg)
+
+                # Execute each tool call and append tool role messages
+                has_tool_calls = False
+                for tool_call in response.tool_calls:
+                    has_tool_calls = True
+                    tool_call_id = tool_call.get("id", "")
+                    function_info = tool_call.get("function", {})
+                    tool_name = function_info.get("name", "")
+                    arguments_str = function_info.get("arguments", "{}")
+
+                    # Parse arguments from JSON string
+                    try:
+                        arguments = json.loads(arguments_str) if isinstance(arguments_str, str) else arguments_str
+                    except (json.JSONDecodeError, TypeError):
+                        arguments = {}
+
+                    logger.info(
+                        "Agent '%s' native tool call: %s(%s)",
+                        self.name, tool_name,
+                        json.dumps(arguments, ensure_ascii=False)[:100],
+                    )
+
+                    result = self.execute_tool(tool_name, arguments)
+
+                    # Append tool result message in OpenAI format
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": result,
+                    })
+
+                if has_tool_calls:
+                    tool_iterations += 1
+                    continue
+
+            # --- Text-based fallback path ---
+            # Cek apakah ada tool calls dalam response text
             tool_calls = self._parse_tool_calls_from_text(content)
 
             if not tool_calls:

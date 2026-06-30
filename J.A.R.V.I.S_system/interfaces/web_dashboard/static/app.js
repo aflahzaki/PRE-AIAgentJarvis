@@ -108,11 +108,14 @@
     var chatMessages = document.getElementById('chat-messages');
     var typingIndicator = document.getElementById('typing-indicator');
 
-    chatForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        var message = chatInput.value.trim();
-        if (!message) return;
-
+    /**
+     * Send a message using streaming SSE endpoint.
+     * Tokens are appended to the message bubble in real-time.
+     * Falls back to non-streaming on error.
+     *
+     * @param {string} message - The user message to send.
+     */
+    async function sendMessageStreaming(message) {
         // Add user message
         appendMessage('user', message);
         chatInput.value = '';
@@ -122,24 +125,93 @@
         scrollChatToBottom();
 
         try {
-            var data = await apiFetch('/chat', {
+            var response = await fetch(API_BASE + '/chat/stream', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message }),
             });
 
-            typingIndicator.style.display = 'none';
-
-            var meta = '';
-            if (data.model) {
-                meta = data.provider + ' / ' + data.model;
-                if (data.task_type) meta += ' [' + data.task_type + ']';
+            if (!response.ok) {
+                throw new Error('Stream request failed with status ' + response.status);
             }
 
-            appendMessage('assistant', data.response, meta);
-        } catch (error) {
             typingIndicator.style.display = 'none';
-            appendMessage('assistant', 'Error: ' + error.message);
+
+            // Create assistant message bubble for streaming content
+            var div = document.createElement('div');
+            div.className = 'message assistant';
+            var html = '<div class="message-avatar">J</div>';
+            html += '<div class="message-content"><p></p></div>';
+            div.innerHTML = html;
+            chatMessages.appendChild(div);
+            var contentEl = div.querySelector('.message-content p');
+
+            // Read the stream
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            var fullResponse = '';
+
+            while (true) {
+                var result = await reader.read();
+                if (result.done) break;
+
+                buffer += decoder.decode(result.value, { stream: true });
+
+                // Process complete SSE lines
+                var lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line.indexOf('data: ') === 0) {
+                        var data = line.substring(6);
+                        if (data === '[DONE]') {
+                            // Stream complete
+                            break;
+                        }
+                        fullResponse += data;
+                        contentEl.textContent = fullResponse;
+                        scrollChatToBottom();
+                    }
+                }
+            }
+
+            // If no content was received, show a fallback message
+            if (!fullResponse) {
+                contentEl.textContent = 'No response received.';
+            }
+        } catch (error) {
+            // Fallback to non-streaming on any error
+            typingIndicator.style.display = 'none';
+            console.error('Streaming failed, falling back:', error);
+
+            try {
+                var data = await apiFetch('/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({ message: message }),
+                });
+
+                var meta = '';
+                if (data.model) {
+                    meta = data.provider + ' / ' + data.model;
+                    if (data.task_type) meta += ' [' + data.task_type + ']';
+                }
+
+                appendMessage('assistant', data.response, meta);
+            } catch (fallbackError) {
+                appendMessage('assistant', 'Error: ' + fallbackError.message);
+            }
         }
+    }
+
+    chatForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var message = chatInput.value.trim();
+        if (!message) return;
+
+        // Use streaming version
+        sendMessageStreaming(message);
     });
 
     function appendMessage(role, content, meta) {

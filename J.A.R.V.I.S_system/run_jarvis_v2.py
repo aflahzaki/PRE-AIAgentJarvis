@@ -196,6 +196,32 @@ def process_input(orchestrator: Orchestrator, user_input: str) -> None:
         )
 
 
+def process_input_streaming(orchestrator: Orchestrator, user_input: str) -> None:
+    """Process user input with streaming output - tokens appear in real-time.
+
+    Calls orchestrator.process_stream() and prints tokens one by one
+    as they are generated. No spinner is used since tokens appear
+    incrementally.
+
+    Args:
+        orchestrator: The Orchestrator instance.
+        user_input: The user's input text.
+    """
+    full_response = ""
+    for token in orchestrator.process_stream(user_input):
+        console.print(token, end="")
+        full_response += token
+
+    # Print newline after streaming completes
+    console.print()
+
+    # If no output was produced, notify user
+    if not full_response:
+        console.print(
+            "[yellow]No response received. Check provider status with 'status' command.[/yellow]"
+        )
+
+
 def main() -> None:
     """Main entry point - Interactive REPL loop."""
     # Load environment variables dari .env file
@@ -252,8 +278,12 @@ def main() -> None:
                 console.print("[green]Conversation memory cleared.[/green]")
                 continue
 
-            # Normal input - process melalui orchestrator
-            process_input(orchestrator, user_input)
+            # Normal input - process melalui orchestrator with streaming
+            try:
+                process_input_streaming(orchestrator, user_input)
+            except Exception:
+                # Fallback to non-streaming if streaming fails
+                process_input(orchestrator, user_input)
 
         except KeyboardInterrupt:
             # Ctrl+C - graceful exit
