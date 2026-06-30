@@ -9,9 +9,10 @@ Difficulty Levels:
 - MEDIUM: Code fixes, file operations, general technical questions
 - HARD: Complex reasoning, architecture design, research tasks
 
-Fallback Logic:
-- If Ollama unavailable -> use Groq
-- If Groq rate limited -> use alternative model
+Fallback Logic (4 providers):
+- EASY: Ollama small -> Ollama medium -> Groq -> Gemini -> OpenRouter
+- MEDIUM: Ollama medium -> Groq -> Gemini -> OpenRouter
+- HARD: Groq -> Gemini -> OpenRouter -> Ollama medium
 """
 
 import logging
@@ -23,6 +24,8 @@ from typing import Optional, Tuple
 from core.providers.base_provider import BaseProvider
 from core.providers.ollama_provider import OllamaProvider
 from core.providers.groq_provider import GroqProvider
+from core.providers.gemini_provider import GeminiProvider
+from core.providers.openrouter_provider import OpenRouterProvider
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +71,8 @@ class ModelRouter:
     Analyzes user input to determine task difficulty, then selects
     the most appropriate provider and model. Implements fallback
     logic for when preferred providers are unavailable.
+
+    Supports 4 providers: Ollama, Groq, Gemini, OpenRouter.
     """
 
     # Keyword patterns untuk klasifikasi difficulty
@@ -118,19 +123,25 @@ class ModelRouter:
     ]
 
     def __init__(self) -> None:
-        """Initialize the model router with providers."""
+        """Initialize the model router with all 4 providers."""
         # Inisialisasi providers
         self.ollama = OllamaProvider()
         self.groq = GroqProvider()
+        self.gemini = GeminiProvider()
+        self.openrouter = OpenRouterProvider()
 
         # Konfigurasi model dari environment variables
         self.ollama_model_small = os.getenv("OLLAMA_MODEL_SMALL", "llama3.2:3b")
         self.ollama_model_medium = os.getenv("OLLAMA_MODEL_MEDIUM", "qwen2.5-coder:7b")
         self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        self.openrouter_model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 
         # Cache status ketersediaan provider
         self._ollama_available = None  # type: Optional[bool]
         self._groq_available = None  # type: Optional[bool]
+        self._gemini_available = None  # type: Optional[bool]
+        self._openrouter_available = None  # type: Optional[bool]
 
     def classify_difficulty(self, user_input: str) -> Tuple[Difficulty, str]:
         """Classify the difficulty of a user's request.
@@ -175,13 +186,17 @@ class ModelRouter:
         return Difficulty.EASY, "Short unclassified input, defaulting to easy"
 
     def check_providers(self) -> None:
-        """Refresh provider availability status."""
+        """Refresh provider availability status for all 4 providers."""
         self._ollama_available = self.ollama.is_available()
         self._groq_available = self.groq.is_available()
+        self._gemini_available = self.gemini.is_available()
+        self._openrouter_available = self.openrouter.is_available()
         logger.info(
-            "Provider status - Ollama: %s, Groq: %s",
+            "Provider status - Ollama: %s, Groq: %s, Gemini: %s, OpenRouter: %s",
             "available" if self._ollama_available else "unavailable",
             "available" if self._groq_available else "unavailable",
+            "available" if self._gemini_available else "unavailable",
+            "available" if self._openrouter_available else "unavailable",
         )
 
     def route(self, user_input: str) -> ModelRoute:
@@ -203,6 +218,10 @@ class ModelRouter:
             self._ollama_available = self.ollama.is_available()
         if self._groq_available is None:
             self._groq_available = self.groq.is_available()
+        if self._gemini_available is None:
+            self._gemini_available = self.gemini.is_available()
+        if self._openrouter_available is None:
+            self._openrouter_available = self.openrouter.is_available()
 
         # Routing berdasarkan difficulty
         if difficulty == Difficulty.EASY:
@@ -215,7 +234,7 @@ class ModelRouter:
     def _route_easy(self, difficulty: Difficulty, reason: str) -> ModelRoute:
         """Route EASY tasks to small local model.
 
-        Fallback: Ollama medium -> Groq if all local unavailable.
+        Fallback chain: Ollama small -> Ollama medium -> Groq -> Gemini -> OpenRouter.
         """
         # Preferensi: Ollama small model (hemat resource)
         if self._ollama_available:
@@ -226,7 +245,7 @@ class ModelRouter:
                 reason=reason,
             )
 
-        # Fallback ke Groq jika Ollama tidak tersedia
+        # Fallback ke Groq
         if self._groq_available:
             return ModelRoute(
                 provider=self.groq,
@@ -235,13 +254,31 @@ class ModelRouter:
                 reason="{} (fallback: Ollama unavailable)".format(reason),
             )
 
+        # Fallback ke Gemini
+        if self._gemini_available:
+            return ModelRoute(
+                provider=self.gemini,
+                model=self.gemini_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Ollama, Groq unavailable)".format(reason),
+            )
+
+        # Fallback ke OpenRouter
+        if self._openrouter_available:
+            return ModelRoute(
+                provider=self.openrouter,
+                model=self.openrouter_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Ollama, Groq, Gemini unavailable)".format(reason),
+            )
+
         # Tidak ada provider yang tersedia
         return self._no_provider_route(difficulty, reason)
 
     def _route_medium(self, difficulty: Difficulty, reason: str) -> ModelRoute:
         """Route MEDIUM tasks to medium local model.
 
-        Fallback: Groq if local model unavailable.
+        Fallback chain: Ollama medium -> Groq -> Gemini -> OpenRouter.
         """
         # Preferensi: Ollama medium model
         if self._ollama_available:
@@ -261,12 +298,30 @@ class ModelRouter:
                 reason="{} (fallback: Ollama unavailable)".format(reason),
             )
 
+        # Fallback ke Gemini
+        if self._gemini_available:
+            return ModelRoute(
+                provider=self.gemini,
+                model=self.gemini_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Ollama, Groq unavailable)".format(reason),
+            )
+
+        # Fallback ke OpenRouter
+        if self._openrouter_available:
+            return ModelRoute(
+                provider=self.openrouter,
+                model=self.openrouter_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Ollama, Groq, Gemini unavailable)".format(reason),
+            )
+
         return self._no_provider_route(difficulty, reason)
 
     def _route_hard(self, difficulty: Difficulty, reason: str) -> ModelRoute:
         """Route HARD tasks to powerful cloud model.
 
-        Fallback: Ollama medium if cloud unavailable.
+        Fallback chain: Groq -> Gemini -> OpenRouter -> Ollama medium.
         """
         # Preferensi: Groq (model besar untuk task kompleks)
         if self._groq_available:
@@ -277,13 +332,31 @@ class ModelRouter:
                 reason=reason,
             )
 
+        # Fallback ke Gemini
+        if self._gemini_available:
+            return ModelRoute(
+                provider=self.gemini,
+                model=self.gemini_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Groq unavailable)".format(reason),
+            )
+
+        # Fallback ke OpenRouter
+        if self._openrouter_available:
+            return ModelRoute(
+                provider=self.openrouter,
+                model=self.openrouter_model,
+                difficulty=difficulty,
+                reason="{} (fallback: Groq, Gemini unavailable)".format(reason),
+            )
+
         # Fallback ke Ollama medium (lebih baik daripada tidak ada)
         if self._ollama_available:
             return ModelRoute(
                 provider=self.ollama,
                 model=self.ollama_model_medium,
                 difficulty=difficulty,
-                reason="{} (fallback: Groq unavailable, using local model)".format(reason),
+                reason="{} (fallback: Groq, Gemini, OpenRouter unavailable, using local model)".format(reason),
             )
 
         return self._no_provider_route(difficulty, reason)
@@ -302,7 +375,7 @@ class ModelRouter:
         )
 
     def get_status(self) -> dict:
-        """Get current router and provider status.
+        """Get current router and provider status for all 4 providers.
 
         Returns:
             Dict with provider availability and configuration info.
@@ -318,5 +391,15 @@ class ModelRouter:
                 "available": self._groq_available,
                 "model": self.groq_model,
                 "rate_limit": self.groq.get_rate_limit_status(),
+            },
+            "gemini": {
+                "available": self._gemini_available,
+                "model": self.gemini_model,
+                "rate_limit": self.gemini.get_rate_limit_status(),
+            },
+            "openrouter": {
+                "available": self._openrouter_available,
+                "model": self.openrouter_model,
+                "rate_limit": self.openrouter.get_rate_limit_status(),
             },
         }

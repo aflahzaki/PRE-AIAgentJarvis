@@ -2,7 +2,8 @@
 Status API Route - System health and status.
 
 Provides GET /api/status endpoint returning orchestrator status
-and database health information.
+and database health information. Reports on all 4 providers:
+Ollama, Groq, Gemini, and OpenRouter.
 """
 
 import logging

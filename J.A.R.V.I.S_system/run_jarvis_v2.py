@@ -133,13 +133,43 @@ def print_status(orchestrator: Orchestrator) -> None:
         if groq_info["available"]
         else "[red]Unavailable[/red]"
     )
-    rate_info = groq_info.get("rate_limit", {})
+    groq_rate_info = groq_info.get("rate_limit", {})
     groq_details = "Model: {} | Requests: {}/{}".format(
         groq_info["model"],
-        rate_info.get("requests_last_minute", 0),
-        rate_info.get("max_requests_per_minute", 30),
+        groq_rate_info.get("requests_last_minute", 0),
+        groq_rate_info.get("max_requests_per_minute", 30),
     )
     table.add_row("Groq (Cloud)", groq_status, groq_details)
+
+    # Gemini
+    gemini_info = status["providers"]["gemini"]
+    gemini_status = (
+        "[green]Available[/green]"
+        if gemini_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    gemini_rate_info = gemini_info.get("rate_limit", {})
+    gemini_details = "Model: {} | Requests: {}/{}".format(
+        gemini_info["model"],
+        gemini_rate_info.get("requests_last_minute", 0),
+        gemini_rate_info.get("max_requests_per_minute", 60),
+    )
+    table.add_row("Gemini (Google)", gemini_status, gemini_details)
+
+    # OpenRouter
+    openrouter_info = status["providers"]["openrouter"]
+    openrouter_status = (
+        "[green]Available[/green]"
+        if openrouter_info["available"]
+        else "[red]Unavailable[/red]"
+    )
+    openrouter_rate_info = openrouter_info.get("rate_limit", {})
+    openrouter_details = "Model: {} | Requests: {}/{}".format(
+        openrouter_info["model"],
+        openrouter_rate_info.get("requests_last_minute", 0),
+        openrouter_rate_info.get("max_requests_per_minute", 20),
+    )
+    table.add_row("OpenRouter (Multi)", openrouter_status, openrouter_details)
 
     # Memory
     mem_info = status["memory"]
@@ -153,11 +183,19 @@ def print_status(orchestrator: Orchestrator) -> None:
     console.print(table)
 
     # Warning jika tidak ada provider
-    if not ollama_info["available"] and not groq_info["available"]:
+    any_available = (
+        ollama_info["available"]
+        or groq_info["available"]
+        or gemini_info["available"]
+        or openrouter_info["available"]
+    )
+    if not any_available:
         console.print(
             "\n[bold red]WARNING:[/bold red] No LLM providers available!\n"
             "[dim]- Start Ollama: [bold]ollama serve[/bold]\n"
-            "- Or set GROQ_API_KEY in .env file[/dim]"
+            "- Or set GROQ_API_KEY in .env file\n"
+            "- Or set GEMINI_API_KEY in .env file\n"
+            "- Or set OPENROUTER_API_KEY in .env file[/dim]"
         )
 
 
