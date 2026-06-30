@@ -89,6 +89,7 @@ else:
     from interfaces.web_dashboard.routes.journals import router as journals_router
     from interfaces.web_dashboard.routes.habits import router as habits_router
     from interfaces.web_dashboard.routes.status import router as status_router
+    from interfaces.web_dashboard.routes.analytics import router as analytics_router
 
     app.include_router(chat_router)
     app.include_router(tasks_router)
@@ -96,6 +97,7 @@ else:
     app.include_router(journals_router)
     app.include_router(habits_router)
     app.include_router(status_router)
+    app.include_router(analytics_router)
 
     @app.post("/api/auth/login")
     async def login(request: Request):

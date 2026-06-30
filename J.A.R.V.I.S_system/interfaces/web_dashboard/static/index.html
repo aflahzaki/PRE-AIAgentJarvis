@@ -42,6 +42,10 @@
                     <span class="nav-icon">&#9881;</span>
                     <span class="nav-label">Status</span>
                 </li>
+                <li class="nav-item" data-section="analytics">
+                    <span class="nav-icon">&#9636;</span>
+                    <span class="nav-label">Analytics</span>
+                </li>
             </ul>
             <div class="sidebar-footer">
                 <p class="footer-text">Powered by Multi-Agent AI</p>
@@ -243,6 +247,64 @@
                 </div>
                 <div id="status-panel" class="status-grid">
                     <div class="loading">Loading status...</div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="section-analytics" class="content-section">
+                <div class="section-header">
+                    <h1>Analytics</h1>
+                    <p class="section-desc">Usage statistics and provider health</p>
+                </div>
+                <div class="analytics-container">
+                    <!-- Stats Cards Row -->
+                    <div class="analytics-cards">
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Requests Today</div>
+                            <div class="analytics-card-value" id="stat-requests">0</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Avg Response Time</div>
+                            <div class="analytics-card-value" id="stat-response-time">0ms</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Cache Hit Rate</div>
+                            <div class="analytics-card-value" id="stat-cache-rate">0%</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Error Rate</div>
+                            <div class="analytics-card-value" id="stat-error-rate">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="analytics-charts">
+                        <!-- Agent Usage -->
+                        <div class="analytics-chart-card">
+                            <div class="analytics-chart-title">Agent Usage</div>
+                            <div class="analytics-bar-chart" id="chart-agent-usage">
+                                <div class="empty-state"><p>No data yet</p></div>
+                            </div>
+                        </div>
+
+                        <!-- Provider Distribution -->
+                        <div class="analytics-chart-card">
+                            <div class="analytics-chart-title">Provider Distribution</div>
+                            <div class="analytics-bar-chart" id="chart-provider-usage">
+                                <div class="empty-state"><p>No data yet</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Health Status -->
+                    <div class="analytics-health">
+                        <div class="analytics-chart-card full-width">
+                            <div class="analytics-chart-title">Provider Health</div>
+                            <div id="health-status-panel" class="health-grid">
+                                <div class="empty-state"><p>No health data</p></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>

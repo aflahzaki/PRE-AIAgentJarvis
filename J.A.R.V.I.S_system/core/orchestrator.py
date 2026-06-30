@@ -19,6 +19,7 @@ Features:
 
 import logging
 import re
+import time
 from typing import Dict, Generator, List, Optional, Tuple
 
 from core.agents.coder_agent import CoderAgent
@@ -28,6 +29,8 @@ from core.agents.data_analyst_agent import DataAnalystAgent
 from core.agents.scheduler_agent import SchedulerAgent
 from core.agents.writer_agent import WriterAgent
 from core.agents.life_assistant_agent import LifeAssistantAgent
+from core.analytics.analytics_tracker import AnalyticsTracker
+from core.analytics.health_monitor import HealthMonitor
 from core.memory.cache import ResponseCache
 from core.memory.conversation import ConversationMemory
 from core.model_router import Difficulty, ModelRoute, ModelRouter
@@ -173,6 +176,12 @@ class Orchestrator:
         self._writer_agent = None  # type: Optional[WriterAgent]
         self._life_assistant_agent = None  # type: Optional[LifeAssistantAgent]
 
+        # Analytics tracker (lightweight JSON-based)
+        self.analytics = AnalyticsTracker()
+
+        # Health monitor (background daemon thread)
+        self.health_monitor = self._init_health_monitor()
+
         # Cek ketersediaan provider saat startup
         self.router.check_providers()
 
@@ -207,6 +216,50 @@ class Orchestrator:
             "Response cache enabled: max_size=%d, ttl=%ds", max_size, ttl
         )
         return cache
+
+    def _init_health_monitor(self) -> Optional[HealthMonitor]:
+        """Initialize the background health monitor.
+
+        Starts a daemon thread that checks provider availability every
+        5 minutes. Returns None if initialization fails gracefully.
+
+        Returns:
+            HealthMonitor instance, or None on failure.
+        """
+        import os
+
+        monitor_enabled = os.environ.get("HEALTH_MONITOR_ENABLED", "true").lower()
+        if monitor_enabled not in ("true", "1", "yes"):
+            logger.info("Health monitor disabled via HEALTH_MONITOR_ENABLED")
+            return None
+
+        try:
+            interval = int(os.environ.get("HEALTH_CHECK_INTERVAL", "300"))
+            monitor = HealthMonitor(check_interval_seconds=interval)
+
+            # Collect providers from the router
+            providers = {}
+            if hasattr(self.router, "providers"):
+                for name, provider in self.router.providers.items():
+                    providers[name] = provider
+            elif hasattr(self.router, "_providers"):
+                for name, provider in self.router._providers.items():
+                    providers[name] = provider
+
+            if providers:
+                monitor.start(providers)
+                logger.info(
+                    "Health monitor started: %d providers, interval=%ds",
+                    len(providers),
+                    interval,
+                )
+            else:
+                logger.info("Health monitor: no providers found to monitor")
+
+            return monitor
+        except Exception as e:
+            logger.warning("Failed to start health monitor: %s", str(e))
+            return None
 
     def classify_task(self, user_input: str) -> str:
         """Classify user input into task type for agent routing.
@@ -586,7 +639,8 @@ class Orchestrator:
         2. Route to appropriate model via ModelRouter
         3. Execute with the right agent or direct LLM
         4. Store in conversation memory
-        5. Return formatted result
+        5. Record analytics
+        6. Return formatted result
 
         Args:
             user_input: The user's input text.
@@ -594,6 +648,8 @@ class Orchestrator:
         Returns:
             Dict with keys: 'response', 'task_type', 'model', 'provider', 'difficulty'.
         """
+        start_time = time.time()
+
         # Step 1: Klasifikasi task
         task_type = self.classify_task(user_input)
 
@@ -607,37 +663,63 @@ class Orchestrator:
 
         # Step 3: Execute berdasarkan task type
         response_text = ""
+        cache_hit = False
+        success = True
 
-        if task_type == "search":
-            agent = self._get_web_search_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "data":
-            agent = self._get_data_analyst_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "schedule":
-            agent = self._get_scheduler_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "write":
-            agent = self._get_writer_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "life":
-            agent = self._get_life_assistant_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "code":
-            agent = self._get_coder_agent(route)
-            response_text = agent.run(user_input)
-        elif task_type == "research":
-            agent = self._get_researcher_agent(route)
-            response_text = agent.run(user_input)
-        else:
-            # Simple task - direct LLM response
-            response_text = self._direct_llm_response(user_input, route)
+        try:
+            if task_type == "search":
+                agent = self._get_web_search_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "data":
+                agent = self._get_data_analyst_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "schedule":
+                agent = self._get_scheduler_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "write":
+                agent = self._get_writer_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "life":
+                agent = self._get_life_assistant_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "code":
+                agent = self._get_coder_agent(route)
+                response_text = agent.run(user_input)
+            elif task_type == "research":
+                agent = self._get_researcher_agent(route)
+                response_text = agent.run(user_input)
+            else:
+                # Simple task - direct LLM response
+                response_text = self._direct_llm_response(user_input, route)
+                # Check if it was a cache hit
+                if self.cache is not None and hasattr(self.cache, "last_was_hit"):
+                    cache_hit = self.cache.last_was_hit
+        except Exception as e:
+            success = False
+            response_text = "Maaf, terjadi kesalahan: {}".format(str(e))
+            logger.error("Error processing request: %s", str(e))
 
         # Step 4: Simpan ke conversation memory
         self.memory.add_message("user", user_input)
         self.memory.add_message("assistant", response_text)
 
-        # Step 5: Return structured result
+        # Step 5: Record analytics
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        try:
+            self.analytics.record_request(
+                task_type=task_type,
+                agent_used=task_type,
+                provider_used=route.provider.name,
+                model_used=route.model,
+                response_time_ms=elapsed_ms,
+                tokens_used=0,
+                cache_hit=cache_hit,
+                success=success,
+            )
+        except Exception as analytics_err:
+            logger.debug("Analytics recording failed: %s", str(analytics_err))
+
+        # Step 6: Return structured result
         return {
             "response": response_text,
             "task_type": task_type,

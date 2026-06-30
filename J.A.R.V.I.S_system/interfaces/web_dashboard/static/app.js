@@ -156,6 +156,9 @@
             case 'status':
                 loadStatus();
                 break;
+            case 'analytics':
+                loadAnalytics();
+                break;
         }
     }
 
@@ -938,6 +941,154 @@
         } catch (error) {
             container.innerHTML = '<div class="status-card"><div class="status-card-title">Error</div><p>' + escapeHtml(error.message) + '</p></div>';
         }
+    }
+
+    // ============================================
+    // Analytics Section
+    // ============================================
+
+    /**
+     * Load analytics data from the API and render stats + charts.
+     */
+    async function loadAnalytics() {
+        try {
+            var [todayData, healthData] = await Promise.all([
+                apiFetch('/analytics/today').catch(function () { return {}; }),
+                apiFetch('/analytics/health').catch(function () { return {}; }),
+            ]);
+
+            renderAnalyticsStats(todayData);
+            renderAgentUsageChart(todayData.agent_usage || {});
+            renderProviderUsageChart(todayData.provider_usage || {});
+            renderHealthStatus(healthData);
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+        }
+    }
+
+    /**
+     * Render the top stats cards with today's data.
+     */
+    function renderAnalyticsStats(data) {
+        var reqEl = document.getElementById('stat-requests');
+        var rtEl = document.getElementById('stat-response-time');
+        var cacheEl = document.getElementById('stat-cache-rate');
+        var errorEl = document.getElementById('stat-error-rate');
+
+        if (reqEl) reqEl.textContent = data.total_requests || 0;
+        if (rtEl) rtEl.textContent = (data.avg_response_time_ms || 0) + 'ms';
+        if (cacheEl) cacheEl.textContent = (data.cache_hit_rate || 0) + '%';
+        if (errorEl) errorEl.textContent = (data.error_rate || 0) + '%';
+    }
+
+    /**
+     * Render a CSS bar chart for agent usage distribution.
+     */
+    function renderAgentUsageChart(agentUsage) {
+        var container = document.getElementById('chart-agent-usage');
+        if (!container) return;
+
+        var entries = Object.entries(agentUsage);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No data yet</p></div>';
+            return;
+        }
+
+        var total = entries.reduce(function (sum, entry) { return sum + entry[1]; }, 0);
+        var colors = ['#00bcd4', '#4caf50', '#ff9800', '#f44336', '#9c27b0', '#2196f3', '#ffeb3b', '#e91e63'];
+
+        var html = '';
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        entries.forEach(function (entry, idx) {
+            var name = entry[0];
+            var count = entry[1];
+            var pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            var color = colors[idx % colors.length];
+
+            html += '<div class="bar-chart-row">';
+            html += '<span class="bar-label">' + escapeHtml(name) + '</span>';
+            html += '<div class="bar-track">';
+            html += '<div class="bar-fill" style="width:' + pct + '%;background:' + color + ';"></div>';
+            html += '</div>';
+            html += '<span class="bar-value">' + count + ' (' + pct + '%)</span>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Render a CSS bar chart for provider usage distribution.
+     */
+    function renderProviderUsageChart(providerUsage) {
+        var container = document.getElementById('chart-provider-usage');
+        if (!container) return;
+
+        var entries = Object.entries(providerUsage);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No data yet</p></div>';
+            return;
+        }
+
+        var total = entries.reduce(function (sum, entry) { return sum + entry[1]; }, 0);
+        var colors = ['#2196f3', '#4caf50', '#ff9800', '#9c27b0', '#00bcd4', '#f44336'];
+
+        var html = '';
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        entries.forEach(function (entry, idx) {
+            var name = entry[0];
+            var count = entry[1];
+            var pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            var color = colors[idx % colors.length];
+
+            html += '<div class="bar-chart-row">';
+            html += '<span class="bar-label">' + escapeHtml(name) + '</span>';
+            html += '<div class="bar-track">';
+            html += '<div class="bar-fill" style="width:' + pct + '%;background:' + color + ';"></div>';
+            html += '</div>';
+            html += '<span class="bar-value">' + count + ' (' + pct + '%)</span>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Render provider health status indicators.
+     */
+    function renderHealthStatus(healthData) {
+        var container = document.getElementById('health-status-panel');
+        if (!container) return;
+
+        var providers = healthData.providers || {};
+        var uptime = healthData.uptime || {};
+        var entries = Object.keys(providers);
+
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No health data available</p></div>';
+            return;
+        }
+
+        var html = '';
+        entries.forEach(function (name) {
+            var status = providers[name] || {};
+            var uptimeInfo = uptime[name] || {};
+            var available = status.available;
+            var statusClass = available === true ? 'health-online' : (available === false ? 'health-offline' : 'health-unknown');
+            var statusText = available === true ? 'Online' : (available === false ? 'Offline' : 'Unknown');
+            var uptimePct = uptimeInfo.uptime_percent !== undefined ? uptimeInfo.uptime_percent + '%' : 'N/A';
+
+            html += '<div class="health-item">';
+            html += '<div class="health-indicator ' + statusClass + '"></div>';
+            html += '<div class="health-info">';
+            html += '<span class="health-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="health-status-text">' + statusText + '</span>';
+            html += '</div>';
+            html += '<div class="health-uptime">Uptime: ' + uptimePct + '</div>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
     }
 
     // ============================================

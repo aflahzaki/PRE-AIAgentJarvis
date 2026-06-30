@@ -869,6 +869,196 @@ body {
 }
 
 /* ============================================
+   Analytics Section
+   ============================================ */
+.analytics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.analytics-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.analytics-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.analytics-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-glow);
+}
+
+.analytics-card-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.analytics-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.analytics-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.analytics-chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: var(--transition);
+}
+
+.analytics-chart-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-glow);
+}
+
+.analytics-chart-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.analytics-chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.analytics-bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bar-chart-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bar-label {
+    width: 80px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bar-track {
+    flex: 1;
+    height: 20px;
+    background: var(--bg-input);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    min-width: 2px;
+}
+
+.bar-value {
+    width: 90px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Health Status */
+.analytics-health {
+    display: flex;
+}
+
+.health-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.health-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 200px;
+    flex: 1;
+}
+
+.health-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.health-indicator.health-online {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.health-indicator.health-offline {
+    background: var(--danger);
+    box-shadow: 0 0 8px var(--danger);
+}
+
+.health-indicator.health-unknown {
+    background: var(--text-muted);
+}
+
+.health-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.health-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.health-status-text {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.health-uptime {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ============================================
    Responsive Design
    ============================================ */
 @media (max-width: 768px) {
