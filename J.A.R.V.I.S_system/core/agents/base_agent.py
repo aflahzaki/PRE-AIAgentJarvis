@@ -397,15 +397,18 @@ class BaseAgent(ABC):
                 for tool_call in response.tool_calls:
                     has_tool_calls = True
                     tool_call_id = tool_call.get("id", "")
-                    function_info = tool_call.get("function", {})
-                    tool_name = function_info.get("name", "")
-                    arguments_str = function_info.get("arguments", "{}")
+                    # Provider returns flat structure: {"id": ..., "name": ..., "arguments": ...}
+                    tool_name = tool_call.get("name", "")
+                    arguments_raw = tool_call.get("arguments", {})
 
-                    # Parse arguments from JSON string
-                    try:
-                        arguments = json.loads(arguments_str) if isinstance(arguments_str, str) else arguments_str
-                    except (json.JSONDecodeError, TypeError):
-                        arguments = {}
+                    # Parse arguments - may be a JSON string or already a dict
+                    if isinstance(arguments_raw, str):
+                        try:
+                            arguments = json.loads(arguments_raw)
+                        except (json.JSONDecodeError, TypeError):
+                            arguments = {}
+                    else:
+                        arguments = arguments_raw if isinstance(arguments_raw, dict) else {}
 
                     logger.info(
                         "Agent '%s' native tool call: %s(%s)",
