@@ -12,6 +12,10 @@ Special Commands:
     help    - Show available commands
     tools   - Show registered agent tools
     status  - Show provider/system status
+    models  - Show installed/missing Ollama models
+    export  - Export conversation to Markdown
+    export html - Export conversation to HTML
+    export txt  - Export conversation to plain text
     clear   - Clear conversation memory
     exit    - Exit the program (also: quit, q)
 """
@@ -19,6 +23,7 @@ Special Commands:
 import logging
 import os
 import sys
+from datetime import datetime
 
 # Pastikan core module bisa di-import dari direktori ini
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -31,6 +36,8 @@ from rich.table import Table
 from rich.text import Text
 
 from core.orchestrator import Orchestrator
+from core.utils.model_manager import ModelManager
+from core.utils.export import ConversationExporter
 
 # Setup logging - hanya WARNING ke atas agar tidak spam terminal
 logging.basicConfig(
@@ -69,6 +76,10 @@ def print_help() -> None:
     table.add_row("help", "Show this help message")
     table.add_row("tools", "Show available agent tools")
     table.add_row("status", "Show provider and system status")
+    table.add_row("models", "Show installed/missing Ollama models")
+    table.add_row("export", "Export conversation to Markdown file")
+    table.add_row("export html", "Export conversation to HTML file")
+    table.add_row("export txt", "Export conversation to plain text file")
     table.add_row("clear", "Clear conversation memory")
     table.add_row("exit / quit / q", "Exit J.A.R.V.I.S")
 
@@ -260,6 +271,113 @@ def process_input_streaming(orchestrator: Orchestrator, user_input: str) -> None
         )
 
 
+def print_models() -> None:
+    """Display installed and missing Ollama models."""
+    mm = ModelManager()
+
+    if not mm.check_ollama_installed():
+        console.print(
+            "[bold red]Ollama not found.[/bold red]\n"
+            "[dim]Install from: https://ollama.ai[/dim]"
+        )
+        return
+
+    table = Table(title="Ollama Model Status", border_style="cyan")
+    table.add_column("Model", style="bold")
+    table.add_column("Status")
+    table.add_column("Size")
+    table.add_column("Use Case")
+
+    status = mm.get_model_status()
+
+    # Show recommended models with their status
+    from core.utils.model_manager import RECOMMENDED_MODELS
+    installed_names = [m["name"] for m in status["installed"]]
+
+    for tier, info in RECOMMENDED_MODELS.items():
+        is_installed = info["name"] in installed_names
+        status_text = (
+            "[green]Installed[/green]"
+            if is_installed
+            else "[yellow]Not installed[/yellow]"
+        )
+        table.add_row(
+            info["name"],
+            status_text,
+            info["size"],
+            info["use"],
+        )
+
+    console.print(table)
+
+    # Show other installed models not in recommended list
+    recommended_names = [info["name"] for info in RECOMMENDED_MODELS.values()]
+    other_models = [
+        m["name"] for m in status["installed"]
+        if m["name"] not in recommended_names
+    ]
+    if other_models:
+        console.print("\n[dim]Other installed models: {}[/dim]".format(
+            ", ".join(other_models)
+        ))
+
+    # Suggestion
+    suggestion = mm.suggest_downloads()
+    if suggestion:
+        console.print("\n[yellow]{}[/yellow]".format(suggestion))
+
+
+def export_conversation(orchestrator: Orchestrator, command: str) -> None:
+    """Export the current conversation to a file.
+
+    Args:
+        orchestrator: The Orchestrator instance.
+        command: The full command string (e.g., 'export', 'export html').
+    """
+    # Determine format from command
+    parts = command.strip().split()
+    if len(parts) > 1:
+        fmt = parts[1].lower()
+    else:
+        fmt = "md"
+
+    # Validate format
+    valid_formats = ("md", "html", "txt")
+    if fmt not in valid_formats:
+        console.print(
+            "[red]Invalid format: {}[/red]\n"
+            "[dim]Supported formats: md, html, txt[/dim]".format(fmt)
+        )
+        return
+
+    # Get messages from orchestrator memory
+    messages = orchestrator.memory.get_messages(include_summary=False)
+
+    if not messages:
+        console.print(
+            "[yellow]No messages to export. Start a conversation first.[/yellow]"
+        )
+        return
+
+    # Generate output filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ext_map = {"md": "md", "html": "html", "txt": "txt"}
+    filename = "jarvis_conversation_{}.{}".format(timestamp, ext_map[fmt])
+
+    # Export
+    exporter = ConversationExporter()
+    result = exporter.export_to_file(messages, filename, fmt)
+
+    if result.get("success"):
+        console.print(
+            "[green]Conversation exported to:[/green] {}".format(result["path"])
+        )
+    else:
+        console.print(
+            "[red]Export failed:[/red] {}".format(result.get("error", "Unknown error"))
+        )
+
+
 def main() -> None:
     """Main entry point - Interactive REPL loop."""
     # Load environment variables dari .env file
@@ -277,6 +395,20 @@ def main() -> None:
             "[bold red]Error initializing J.A.R.V.I.S:[/bold red] {}".format(str(e))
         )
         sys.exit(1)
+
+    # Startup model check - only if Ollama is installed
+    try:
+        mm = ModelManager()
+        if mm.check_ollama_installed():
+            suggestion = mm.suggest_downloads()
+            if suggestion:
+                console.print(Panel(
+                    suggestion,
+                    title="Model Suggestions",
+                    border_style="yellow",
+                ))
+    except Exception:
+        pass  # Graceful - never crash on model check
 
     # REPL loop
     while True:
@@ -314,6 +446,14 @@ def main() -> None:
             elif command == "clear":
                 orchestrator.clear_memory()
                 console.print("[green]Conversation memory cleared.[/green]")
+                continue
+
+            elif command == "models":
+                print_models()
+                continue
+
+            elif command.startswith("export"):
+                export_conversation(orchestrator, command)
                 continue
 
             # Normal input - process melalui orchestrator with streaming

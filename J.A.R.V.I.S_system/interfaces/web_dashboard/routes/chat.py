@@ -4,6 +4,7 @@ Chat API Route - AI conversation endpoint.
 Provides POST /api/chat for sending messages to the J.A.R.V.I.S
 orchestrator and receiving AI-generated responses.
 Also provides POST /api/chat/stream for Server-Sent Events streaming.
+Also provides GET /api/chat/export for exporting conversation history.
 """
 
 import json
@@ -11,8 +12,10 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
+
+from core.utils.export import ConversationExporter
 
 logger = logging.getLogger(__name__)
 
@@ -112,3 +115,58 @@ async def chat_stream(request: ChatRequest):
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.get("/chat/export")
+async def export_chat(format: str = "md"):
+    """Export current chat session as downloadable file.
+
+    Args:
+        format: Export format - 'md', 'html', or 'txt'. Defaults to 'md'.
+
+    Returns:
+        File download response with the exported conversation.
+    """
+    from interfaces.web_dashboard.app import get_orchestrator
+
+    orchestrator = get_orchestrator()
+    if orchestrator is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Orchestrator not available. Please try again later.",
+        )
+
+    # Validate format
+    valid_formats = ("md", "html", "txt")
+    if format not in valid_formats:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid format: {}. Use 'md', 'html', or 'txt'.".format(format),
+        )
+
+    # Get messages from orchestrator memory
+    messages = orchestrator.memory.get_messages(include_summary=False)
+
+    # Export even if empty - exporter handles empty gracefully
+    exporter = ConversationExporter()
+
+    if format == "md":
+        content = exporter.to_markdown(messages)
+        media_type = "text/markdown"
+        filename = "jarvis_conversation.md"
+    elif format == "html":
+        content = exporter.to_html(messages)
+        media_type = "text/html"
+        filename = "jarvis_conversation.html"
+    else:
+        content = exporter.to_text(messages)
+        media_type = "text/plain"
+        filename = "jarvis_conversation.txt"
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": "attachment; filename={}".format(filename),
+        },
+    )

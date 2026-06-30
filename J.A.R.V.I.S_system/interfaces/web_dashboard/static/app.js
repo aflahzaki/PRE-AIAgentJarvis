@@ -286,6 +286,44 @@
         sendMessageStreaming(message);
     });
 
+    // Export button handler
+    var exportBtn = document.getElementById('btn-export-chat');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+            // Download conversation as markdown file
+            var url = API_BASE + '/chat/export?format=md';
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'jarvis_conversation.md';
+            // Add auth header via fetch and trigger download
+            fetch(url, {
+                headers: {
+                    'Authorization': 'Bearer ' + authToken,
+                },
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Export failed with status ' + response.status);
+                    }
+                    return response.blob();
+                })
+                .then(function (blob) {
+                    var downloadUrl = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'jarvis_conversation.md';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(downloadUrl);
+                })
+                .catch(function (err) {
+                    console.error('Export error:', err);
+                    alert('Failed to export conversation: ' + err.message);
+                });
+        });
+    }
+
     function appendMessage(role, content, meta) {
         var div = document.createElement('div');
         div.className = 'message ' + role;
