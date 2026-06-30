@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "New agents (web_search_agent, data_analyst_agent, scheduler_agent, writer_agent, life_assistant_agent), knowledge base module (knowledge_base.py, embeddings.py with TF-IDF), protocols (agent_protocol.py, task_queue.py), and plugins (plugin_loader.py). All following BaseAgent pattern.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create J.A.R.V.I.S_system/core/knowledge/__init__.py with module docstring and exports",
     "Create J.A.R.V.I.S_system/core/knowledge/embeddings.py: Class SimpleEmbeddings with TF-IDF via scikit-learn TfidfVectorizer + cosine_similarity. Methods: fit(texts), get_similar(query, texts, top_k). Wrap sklearn import in try/except - fallback to simple keyword matching if unavailable.",
