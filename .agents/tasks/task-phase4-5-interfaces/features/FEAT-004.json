@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Create Proactive Engine (interfaces/proactive/) with proactive_engine.py, triggers.py, notifications.py. Create run_all.py entry point. Update .env.example and requirements_v2.txt with all new entries.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create J.A.R.V.I.S_system/interfaces/proactive/__init__.py with ProactiveEngine export",
     "Create J.A.R.V.I.S_system/interfaces/proactive/proactive_engine.py - Background thread/scheduler running every X minutes (PROACTIVE_INTERVAL_MINUTES env var, default 15). Checks triggers and sends notifications. Configurable enable/disable via PROACTIVE_ENABLED env var. Can start alongside other interfaces. Uses 'schedule' library.",
@@ -28,5 +28,5 @@
     "grep -q 'python-telegram-bot' J.A.R.V.I.S_system/requirements_v2.txt && grep -q 'fastapi' J.A.R.V.I.S_system/requirements_v2.txt && grep -q 'schedule' J.A.R.V.I.S_system/requirements_v2.txt && echo 'reqs OK'"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 6 files created successfully. ProactiveEngine imports cleanly and all 5 trigger functions are importable. notifications.py provides both console_notify and telegram_notify. run_all.py passes AST validation and starts Terminal REPL + Web Dashboard + Proactive Engine with threading. .env.example appended with TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS, VOICE_MODEL, VOICE_LANGUAGE, TTS_VOICE, PROACTIVE_ENABLED, PROACTIVE_INTERVAL_MINUTES (WEB_HOST/WEB_PORT already existed from FEAT-002). requirements_v2.txt appended with python-telegram-bot, schedule, and commented voice deps (fastapi/uvicorn already existed from FEAT-002). No core/ files were modified."
 }
