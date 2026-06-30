@@ -1,0 +1,42 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "New agents (web_search_agent, data_analyst_agent, scheduler_agent, writer_agent, life_assistant_agent), knowledge base module (knowledge_base.py, embeddings.py with TF-IDF), protocols (agent_protocol.py, task_queue.py), and plugins (plugin_loader.py). All following BaseAgent pattern.",
+  "status": "pending",
+  "steps": [
+    "Create J.A.R.V.I.S_system/core/knowledge/__init__.py with module docstring and exports",
+    "Create J.A.R.V.I.S_system/core/knowledge/embeddings.py: Class SimpleEmbeddings with TF-IDF via scikit-learn TfidfVectorizer + cosine_similarity. Methods: fit(texts), get_similar(query, texts, top_k). Wrap sklearn import in try/except - fallback to simple keyword matching if unavailable.",
+    "Create J.A.R.V.I.S_system/core/knowledge/knowledge_base.py: Class KnowledgeBase that uses DatabaseManager for storage and SimpleEmbeddings for semantic search. Methods: add(title, content, category, tags, source), search(query, limit), get_by_category(category), delete(id). Combines keyword + semantic search results.",
+    "Create J.A.R.V.I.S_system/core/protocols/__init__.py with module docstring and exports",
+    "Create J.A.R.V.I.S_system/core/protocols/agent_protocol.py: Dataclasses AgentMessage(sender, receiver, task, context, priority, timestamp) and AgentResponse(sender, content, success, metadata). Class AgentProtocol with methods: send_message(msg), delegate_task(from_agent, to_agent, task), aggregate_results(responses). Provides inter-agent communication standard.",
+    "Create J.A.R.V.I.S_system/core/protocols/task_queue.py: Class TaskQueue with priority queue (urgent>high>medium>low). Methods: enqueue(task_dict), dequeue(), peek(), get_by_status(status), update_status(task_id, status), get_history(). Uses heapq internally. Optionally logs to MySQL via DatabaseManager.",
+    "Create J.A.R.V.I.S_system/core/plugins/__init__.py with module docstring",
+    "Create J.A.R.V.I.S_system/core/plugins/plugin_loader.py: Class PluginLoader. Methods: discover_agents(agents_dir) - auto-discovers *_agent.py files, load_agent(module_path) - imports and returns agent class, get_available_agents() - returns dict of name->class. Uses importlib for dynamic loading.",
+    "Create J.A.R.V.I.S_system/core/agents/web_search_agent.py: Inherits BaseAgent, registers web_search tools (search_web, search_news, get_page_summary). System prompt focused on fact-finding and source verification. get_agent_type() returns 'web_search'.",
+    "Create J.A.R.V.I.S_system/core/agents/data_analyst_agent.py: Inherits BaseAgent, registers data_tools (read_csv_file, describe_data, filter_data, calculate_stats) + execute_python_code. System prompt focused on data analysis and insight generation. get_agent_type() returns 'data_analyst'.",
+    "Create J.A.R.V.I.S_system/core/agents/scheduler_agent.py: Inherits BaseAgent, registers scheduler_tools (add_task, list_tasks, update_task, complete_task, get_overdue_tasks, get_today_tasks). System prompt focused on time management and productivity. get_agent_type() returns 'scheduler'.",
+    "Create J.A.R.V.I.S_system/core/agents/writer_agent.py: Inherits BaseAgent, registers writing_tools (email_template, proposal_template, caption_template, format_academic, format_casual). System prompt focused on clear communication and creativity, multi-purpose writing. get_agent_type() returns 'writer'.",
+    "Create J.A.R.V.I.S_system/core/agents/life_assistant_agent.py: Inherits BaseAgent, registers scheduler_tools + knowledge_tools for journal/mood/habit tracking. System prompt warm, supportive, encouraging. Handles decision making, brainstorming, health tips, motivation. get_agent_type() returns 'life_assistant'.",
+    "Update J.A.R.V.I.S_system/core/agents/__init__.py: Add imports for new agent classes to __all__ list"
+  ],
+  "acceptance_criteria": [
+    "python -c 'from core.agents.web_search_agent import WebSearchAgent' succeeds",
+    "python -c 'from core.agents.data_analyst_agent import DataAnalystAgent' succeeds",
+    "python -c 'from core.agents.scheduler_agent import SchedulerAgent' succeeds",
+    "python -c 'from core.agents.writer_agent import WriterAgent' succeeds",
+    "python -c 'from core.agents.life_assistant_agent import LifeAssistantAgent' succeeds",
+    "python -c 'from core.knowledge.knowledge_base import KnowledgeBase' succeeds",
+    "python -c 'from core.knowledge.embeddings import SimpleEmbeddings' succeeds",
+    "python -c 'from core.protocols.agent_protocol import AgentMessage, AgentProtocol' succeeds",
+    "python -c 'from core.protocols.task_queue import TaskQueue' succeeds",
+    "python -c 'from core.plugins.plugin_loader import PluginLoader' succeeds",
+    "All new agents inherit from BaseAgent and implement get_agent_type()"
+  ],
+  "verification": [
+    "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.agents.web_search_agent import WebSearchAgent; from core.agents.data_analyst_agent import DataAnalystAgent; from core.agents.scheduler_agent import SchedulerAgent; from core.agents.writer_agent import WriterAgent; from core.agents.life_assistant_agent import LifeAssistantAgent; print('All agents OK')\"",
+    "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.knowledge.knowledge_base import KnowledgeBase; from core.knowledge.embeddings import SimpleEmbeddings; from core.protocols.agent_protocol import AgentProtocol; from core.protocols.task_queue import TaskQueue; from core.plugins.plugin_loader import PluginLoader; print('All modules OK')\"",
+    "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.plugins.plugin_loader import PluginLoader; pl = PluginLoader(); agents = pl.discover_agents('core/agents'); print(f'Discovered {len(agents)} agents')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

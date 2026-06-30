@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Database layer: db_manager.py (SQLAlchemy connection manager with MySQL/SQLite fallback), models.py (all 6 table definitions as SQLAlchemy ORM models), and migrations.py (idempotent auto-create tables script). Also update requirements_v2.txt with all new dependencies and update .env.example with MySQL config.",
+  "status": "in_progress",
+  "steps": [
+    "Create J.A.R.V.I.S_system/core/database/__init__.py with module docstring and exports",
+    "Create J.A.R.V.I.S_system/core/database/db_manager.py: DatabaseManager class with connection pooling via SQLAlchemy create_engine. Support MySQL (pymysql driver) with fallback to SQLite. Read config from env vars (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_FALLBACK_SQLITE). Include get_session(), get_engine(), auto-reconnect logic. Wrap sqlalchemy import in try/except - if unavailable, class still loads but methods return error dicts.",
+    "Create J.A.R.V.I.S_system/core/database/models.py: Define SQLAlchemy ORM models for 6 tables: Task (with priority/status enums), Knowledge, Conversation, Journal, Habit, HabitLog. Use declarative_base(). Include proper relationships (HabitLog -> Habit FK). Match the exact SQL schema from the spec.",
+    "Create J.A.R.V.I.S_system/core/database/migrations.py: Script with create_all_tables() function that calls Base.metadata.create_all(engine). Idempotent (checkfirst=True is default). Print status of tables created. Include if __name__ == '__main__' block for direct execution.",
+    "Update J.A.R.V.I.S_system/requirements_v2.txt: Add sqlalchemy>=2.0.0, pymysql>=1.1.0, pandas>=2.0.0, duckduckgo-search>=5.0.0, scikit-learn>=1.3.0, requests>=2.31.0 with section comments",
+    "Update J.A.R.V.I.S_system/.env.example: Add MySQL section (DB_HOST=localhost, DB_PORT=3306, DB_USER=root, DB_PASSWORD=, DB_NAME=jarvis_db, DB_FALLBACK_SQLITE=true)"
+  ],
+  "acceptance_criteria": [
+    "python -c 'from core.database.db_manager import DatabaseManager' succeeds without error (run from J.A.R.V.I.S_system/)",
+    "python -c 'from core.database.models import Task, Knowledge, Conversation, Journal, Habit, HabitLog' succeeds",
+    "python -c 'from core.database.migrations import create_all_tables' succeeds",
+    "DatabaseManager falls back to SQLite when MySQL is unavailable (no crash)",
+    "requirements_v2.txt contains all new dependencies",
+    ".env.example contains MySQL configuration section"
+  ],
+  "verification": [
+    "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && pip install sqlalchemy pymysql 2>/dev/null; python -c \"from core.database import db_manager, models, migrations; print('Database layer OK')\"",
+    "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.database.db_manager import DatabaseManager; dm = DatabaseManager(); print('Fallback:', dm.engine.url if hasattr(dm, 'engine') and dm.engine else 'graceful')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
