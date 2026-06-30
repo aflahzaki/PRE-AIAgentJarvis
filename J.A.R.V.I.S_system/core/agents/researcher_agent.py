@@ -65,7 +65,15 @@ class ResearcherAgent(BaseAgent):
         "- Use clear, structured formatting (headers, bullet points)\n"
         "- Distinguish between established facts and your inference\n"
         "- When comparing options, use tables or structured comparisons\n"
-        "- Always end with actionable insights or next steps"
+        "- Always end with actionable insights or next steps\n\n"
+        "Epistemic Discipline:\n"
+        "- Clearly label confidence levels: HIGH (well-established), "
+        "MEDIUM (reasonable inference), LOW (speculative)\n"
+        "- Distinguish between correlation and causation\n"
+        "- Flag when information may be outdated or training-data-limited\n"
+        "- Never present a single perspective as the only truth\n"
+        "- When citing numbers or statistics, note if they are approximate\n"
+        "- If a claim requires external verification, explicitly say so"
     )
 
     def __init__(

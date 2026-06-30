@@ -14,6 +14,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from core.cognition import ThinkingEngine
 from core.memory.agent_memory import AgentMemory
 from core.providers.base_provider import BaseProvider, ProviderResponse
 
@@ -69,6 +70,9 @@ class BaseAgent(ABC):
 
         # Per-agent persistent memory
         self.agent_memory = AgentMemory(self.name)
+
+        # Cognitive enhancement engine
+        self._thinking = ThinkingEngine()
 
         # Tool registry: nama -> (callable, schema_dict)
         self._tools = {}  # type: Dict[str, Tuple[Callable[..., Any], Dict[str, Any]]]
@@ -328,14 +332,15 @@ class BaseAgent(ABC):
         )
         return response
 
-    def run(self, user_input: str) -> str:
+    def run(self, user_input: str, difficulty: str = "medium", task_type: str = "general") -> str:
         """Execute the agent's self-healing loop.
 
         Process:
-        1. Send message to LLM
-        2. Check if response contains tool calls (native or text-based)
-        3. Execute tools and feed results back
-        4. Repeat until no more tool calls or max iterations reached
+        1. Enhance system prompt with cognitive capabilities (based on difficulty)
+        2. Send message to LLM
+        3. Check if response contains tool calls (native or text-based)
+        4. Execute tools and feed results back
+        5. Repeat until no more tool calls or max iterations reached
 
         Native function calling path:
         - If response.tool_calls is populated (from chat_completion_with_tools),
@@ -352,12 +357,28 @@ class BaseAgent(ABC):
 
         Args:
             user_input: The user's request.
+            difficulty: Task difficulty level ('easy', 'medium', 'hard').
+                Defaults to 'medium' for backward compatibility.
+            task_type: Type of task ('code', 'research', 'general', etc.).
+                Defaults to 'general' for backward compatibility.
 
         Returns:
             Final response string from the agent.
         """
+        # Enhance system prompt with cognitive capabilities before building messages
+        original_prompt = self.system_prompt
+        self.system_prompt = self._thinking.enhance_system_prompt(
+            base_prompt=original_prompt,
+            task=user_input,
+            difficulty=difficulty,
+            task_type=task_type,
+        )
+
         # Build messages termasuk system prompt dan history
         messages = self._build_messages(user_input)
+
+        # Restore original system prompt so it doesn't accumulate enhancements
+        self.system_prompt = original_prompt
 
         # Tambahkan instruksi tool calling jika ada tools terdaftar
         # Only inject text-based tool instruction when native function calling
@@ -496,11 +517,25 @@ class BaseAgent(ABC):
                         provider_errors
                     )
                 )
+                # Log error for future learning
+                self._thinking.log_error(
+                    task_type=task_type,
+                    error_summary="Provider connection exhausted",
+                    context="Failed after {} provider errors".format(provider_errors),
+                )
             else:
                 final_response = (
                     "Maaf, saya tidak berhasil menyelesaikan task ini setelah "
                     "{} iterasi tool-calling. Silakan coba lagi dengan instruksi "
                     "yang lebih spesifik.".format(self.max_retries)
+                )
+                # Log error for future learning
+                self._thinking.log_error(
+                    task_type=task_type,
+                    error_summary="Max tool iterations exhausted",
+                    context="Failed after {} tool-calling iterations".format(
+                        self.max_retries
+                    ),
                 )
             self._messages.append({"role": "assistant", "content": final_response})
 

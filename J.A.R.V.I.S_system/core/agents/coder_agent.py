@@ -59,7 +59,20 @@ class CoderAgent(BaseAgent):
         "5. If errors occur, analyze stderr and fix\n"
         "6. Repeat steps 3-5 until success\n\n"
         "Always explain what you're doing and why. Use tools for every "
-        "file operation - never just describe what code should look like."
+        "file operation - never just describe what code should look like.\n\n"
+        "Debugging Protocol:\n"
+        "When encountering errors, follow this systematic approach:\n"
+        "1. READ the full error traceback carefully\n"
+        "2. IDENTIFY the root cause (not just the symptom)\n"
+        "3. HYPOTHESIZE a fix based on the error type\n"
+        "4. APPLY the fix with minimal changes\n"
+        "5. TEST again to confirm the fix works\n"
+        "6. If the fix creates new errors, ROLLBACK and try an alternative approach\n"
+        "Common error categories to check:\n"
+        "- Import errors: missing module, wrong path, circular import\n"
+        "- Type errors: wrong argument type, None where value expected\n"
+        "- Logic errors: off-by-one, wrong condition, missing edge case\n"
+        "- Runtime errors: file not found, permission denied, timeout"
     )
 
     def __init__(

@@ -670,25 +670,53 @@ class Orchestrator:
         try:
             if task_type == "search":
                 agent = self._get_web_search_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "data":
                 agent = self._get_data_analyst_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "schedule":
                 agent = self._get_scheduler_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "write":
                 agent = self._get_writer_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "life":
                 agent = self._get_life_assistant_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "code":
                 agent = self._get_coder_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             elif task_type == "research":
                 agent = self._get_researcher_agent(route)
-                response_text = agent.run(user_input)
+                response_text = agent.run(
+                    user_input,
+                    difficulty=route.difficulty.value,
+                    task_type=task_type,
+                )
             else:
                 # Simple task - direct LLM response
                 response_text = self._direct_llm_response(user_input, route)
