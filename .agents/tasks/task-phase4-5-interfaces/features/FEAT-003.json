@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Create Voice interface (interfaces/voice/) with speech_to_text.py (Whisper-based), text_to_speech.py (edge-tts), voice_interface.py (main loop), and README_VOICE.md. Also create run_voice.py entry point.",
+  "status": "in_progress",
+  "steps": [
+    "Create J.A.R.V.I.S_system/interfaces/voice/__init__.py with VoiceInterface export",
+    "Create J.A.R.V.I.S_system/interfaces/voice/speech_to_text.py - Uses faster-whisper (or openai-whisper) for STT. Model: 'base' (~1GB RAM). Graceful fallback if whisper not installed (return None, log warning). Function: listen() -> Optional[str] transcribed text. Uses sounddevice for microphone input. Configurable language from VOICE_LANGUAGE env var.",
+    "Create J.A.R.V.I.S_system/interfaces/voice/text_to_speech.py - Uses edge-tts library (free Microsoft Azure voices). Voice from TTS_VOICE env var (default: 'id-ID-ArdiNeural'). Function: speak(text) -> plays audio. Async for non-blocking. Graceful fallback if edge-tts not installed.",
+    "Create J.A.R.V.I.S_system/interfaces/voice/voice_interface.py - Main loop: 1) Listen (STT) -> get text, 2) Process via Orchestrator -> get response, 3) Speak (TTS) -> read aloud. Activation: Enter key or continuous mode. Wake word 'jarvis' optional. Display transcript in terminal. Graceful when STT/TTS unavailable (fallback to text-only).",
+    "Create J.A.R.V.I.S_system/interfaces/voice/README_VOICE.md - Setup guide explaining optional dependencies, how to install whisper model, how to configure voices",
+    "Create J.A.R.V.I.S_system/run_voice.py - Entry point that loads dotenv, sets sys.path, runs VoiceInterface"
+  ],
+  "acceptance_criteria": [
+    "voice_interface.py is importable without error even when whisper/edge-tts are not installed (graceful fallback)",
+    "speech_to_text.py handles ImportError gracefully",
+    "text_to_speech.py handles ImportError gracefully",
+    "run_voice.py is syntactically valid",
+    "Configuration reads from env vars (VOICE_MODEL, VOICE_LANGUAGE, TTS_VOICE)"
+  ],
+  "verification": [
+    "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from interfaces.voice.voice_interface import VoiceInterface; print('Voice OK')\"",
+    "python -c \"import ast; ast.parse(open('J.A.R.V.I.S_system/run_voice.py').read()); print('run_voice.py valid')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
