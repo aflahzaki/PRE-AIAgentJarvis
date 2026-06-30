@@ -23,6 +23,11 @@ from typing import Dict, List, Optional, Tuple
 
 from core.agents.coder_agent import CoderAgent
 from core.agents.researcher_agent import ResearcherAgent
+from core.agents.web_search_agent import WebSearchAgent
+from core.agents.data_analyst_agent import DataAnalystAgent
+from core.agents.scheduler_agent import SchedulerAgent
+from core.agents.writer_agent import WriterAgent
+from core.agents.life_assistant_agent import LifeAssistantAgent
 from core.memory.conversation import ConversationMemory
 from core.model_router import Difficulty, ModelRoute, ModelRouter
 from core.providers.base_provider import BaseProvider, ProviderResponse
@@ -69,6 +74,66 @@ class Orchestrator:
         r"\b(algorithm|algoritma|complexity|kompleksitas)\b",
     ]
 
+    # Pattern: web search tasks
+    SEARCH_PATTERNS = [
+        r"\b(cari|search|searching|googling)\b",
+        r"\b(berita|news|kabar terbaru)\b",
+        r"\b(info terbaru|informasi terbaru|latest info)\b",
+        r"\b(latest|terbaru|update terkini)\b",
+        r"\b(link|url|website|situs)\b",
+        r"\b(browse|lookup|look up|find online)\b",
+        r"\b(trending|viral|populer saat ini)\b",
+        r"\b(apa yang terjadi|what happened|what's new)\b",
+    ]
+
+    # Pattern: data analysis tasks
+    DATA_PATTERNS = [
+        r"\b(data|dataset|dataframe)\b",
+        r"\b(csv|excel|spreadsheet|tabel)\b",
+        r"\b(statistik|statistics|rata.?rata|mean|median)\b",
+        r"\b(analisis data|data analysis|analyze data)\b",
+        r"\b(grafik|chart|graph|plot|visualisasi|visualization)\b",
+        r"\b(korelasi|correlation|regresi|regression)\b",
+        r"\b(pivot|aggregate|group by|filter data)\b",
+        r"\b(insight|pattern|tren data|trend)\b",
+    ]
+
+    # Pattern: scheduling/task management tasks
+    SCHEDULE_PATTERNS = [
+        r"\b(deadline|tenggat|due date)\b",
+        r"\b(jadwal|schedule|agenda|calendar)\b",
+        r"\b(reminder|ingatkan|pengingat)\b",
+        r"\b(task|tugas|todo|to.?do)\b",
+        r"\b(planning|perencanaan|rencana harian)\b",
+        r"\b(besok|tomorrow|minggu depan|next week)\b",
+        r"\b(prioritas|priority|urgent|penting)\b",
+        r"\b(meeting|rapat|janji|appointment)\b",
+    ]
+
+    # Pattern: writing/content creation tasks
+    WRITE_PATTERNS = [
+        r"\b(tulis|tuliskan|write|compose)\b",
+        r"\b(buat email|write email|email formal|email template)\b",
+        r"\b(draft|draf|rangkuman|summary)\b",
+        r"\b(proposal|laporan|report)\b",
+        r"\b(caption|copywriting|konten|content)\b",
+        r"\b(essay|esai|artikel|article)\b",
+        r"\b(surat|letter|memo|dokumen)\b",
+        r"\b(puisi|poem|cerpen|cerita|story)\b",
+    ]
+
+    # Pattern: life assistant/wellness tasks
+    LIFE_PATTERNS = [
+        r"\b(mood|perasaan|feeling|emosi)\b",
+        r"\b(jurnal|journal|diary|catatan harian)\b",
+        r"\b(habit|kebiasaan|rutinitas|routine)\b",
+        r"\b(motivasi|motivation|semangat|inspirasi)\b",
+        r"\b(saran|advice|rekomendasi|suggestion)\b",
+        r"\b(bingung|confused|galau|dilema)\b",
+        r"\b(pilihan|pilih|choice|choose|keputusan|decision)\b",
+        r"\b(self.?care|kesehatan mental|wellness|well.?being)\b",
+    ]
+
     def __init__(self, memory_size: int = 50) -> None:
         """Initialize the Orchestrator.
 
@@ -87,6 +152,11 @@ class Orchestrator:
         # Cache agents - dibuat on-demand saat pertama kali dibutuhkan
         self._coder_agent = None  # type: Optional[CoderAgent]
         self._researcher_agent = None  # type: Optional[ResearcherAgent]
+        self._web_search_agent = None  # type: Optional[WebSearchAgent]
+        self._data_analyst_agent = None  # type: Optional[DataAnalystAgent]
+        self._scheduler_agent = None  # type: Optional[SchedulerAgent]
+        self._writer_agent = None  # type: Optional[WriterAgent]
+        self._life_assistant_agent = None  # type: Optional[LifeAssistantAgent]
 
         # Cek ketersediaan provider saat startup
         self.router.check_providers()
@@ -104,6 +174,11 @@ class Orchestrator:
         more appropriate.
 
         Task types:
+        - 'search': Web searching, news, latest info retrieval
+        - 'data': Data analysis, CSV processing, visualizations
+        - 'schedule': Reminders, deadlines, task management
+        - 'write': Email drafts, articles, proposals, content creation
+        - 'life': Personal advice, wellness, decision help
         - 'code': Code writing, debugging, file manipulation
         - 'research': Complex analysis, comparison, deep reasoning
         - 'simple': Greetings, simple questions, casual chat
@@ -112,10 +187,56 @@ class Orchestrator:
             user_input: The user's input text.
 
         Returns:
-            Task type string: 'code', 'research', or 'simple'.
+            Task type string: 'search', 'data', 'schedule', 'write',
+            'life', 'code', 'research', or 'simple'.
         """
         text = user_input.lower().strip()
 
+        # --- Phase 3: Check new specific patterns first ---
+        # These are more specific task types that should be checked before
+        # the broader code/research patterns to avoid misclassification.
+
+        search_score = sum(
+            1 for p in self.SEARCH_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+        data_score = sum(
+            1 for p in self.DATA_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+        schedule_score = sum(
+            1 for p in self.SCHEDULE_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+        write_score = sum(
+            1 for p in self.WRITE_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+        life_score = sum(
+            1 for p in self.LIFE_PATTERNS
+            if re.search(p, text, re.IGNORECASE)
+        )
+
+        # Determine if any new pattern has a strong match (>= 1)
+        new_scores = {
+            "search": search_score,
+            "data": data_score,
+            "schedule": schedule_score,
+            "write": write_score,
+            "life": life_score,
+        }
+
+        # Find the best new-pattern match
+        best_new_type = max(new_scores, key=new_scores.get)
+        best_new_score = new_scores[best_new_type]
+
+        # If we have a strong new-pattern match, use it
+        # (threshold >= 2 means multiple keywords matched for high confidence,
+        #  or >= 1 with no competing code/research signals)
+        if best_new_score >= 2:
+            return best_new_type
+
+        # --- Original code/research classification logic ---
         # Hitung score untuk setiap kategori
         code_score = 0
         research_score = 0
@@ -127,6 +248,15 @@ class Orchestrator:
         for pattern in self.RESEARCH_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
                 research_score += 1
+
+        # If best_new_score is 1 and code/research scores are 0,
+        # route to the new agent type
+        if best_new_score >= 1 and code_score == 0 and research_score == 0:
+            return best_new_type
+
+        # If best_new_score is 1 and it beats code/research, route to new agent
+        if best_new_score >= 1 and best_new_score >= code_score and best_new_score >= research_score:
+            return best_new_type
 
         # Consult the difficulty classifier for coherence check.
         # If difficulty is HARD and research_score > 0, favor research
@@ -211,6 +341,106 @@ class Orchestrator:
             )
         return self._researcher_agent
 
+    def _get_web_search_agent(self, route: ModelRoute) -> WebSearchAgent:
+        """Get or create a WebSearchAgent with the given route's provider/model.
+
+        Args:
+            route: ModelRoute with provider and model selection.
+
+        Returns:
+            Configured WebSearchAgent instance.
+        """
+        if (
+            self._web_search_agent is None
+            or self._web_search_agent.provider != route.provider
+            or self._web_search_agent.model != route.model
+        ):
+            self._web_search_agent = WebSearchAgent(
+                provider=route.provider,
+                model=route.model,
+            )
+        return self._web_search_agent
+
+    def _get_data_analyst_agent(self, route: ModelRoute) -> DataAnalystAgent:
+        """Get or create a DataAnalystAgent with the given route's provider/model.
+
+        Args:
+            route: ModelRoute with provider and model selection.
+
+        Returns:
+            Configured DataAnalystAgent instance.
+        """
+        if (
+            self._data_analyst_agent is None
+            or self._data_analyst_agent.provider != route.provider
+            or self._data_analyst_agent.model != route.model
+        ):
+            self._data_analyst_agent = DataAnalystAgent(
+                provider=route.provider,
+                model=route.model,
+            )
+        return self._data_analyst_agent
+
+    def _get_scheduler_agent(self, route: ModelRoute) -> SchedulerAgent:
+        """Get or create a SchedulerAgent with the given route's provider/model.
+
+        Args:
+            route: ModelRoute with provider and model selection.
+
+        Returns:
+            Configured SchedulerAgent instance.
+        """
+        if (
+            self._scheduler_agent is None
+            or self._scheduler_agent.provider != route.provider
+            or self._scheduler_agent.model != route.model
+        ):
+            self._scheduler_agent = SchedulerAgent(
+                provider=route.provider,
+                model=route.model,
+            )
+        return self._scheduler_agent
+
+    def _get_writer_agent(self, route: ModelRoute) -> WriterAgent:
+        """Get or create a WriterAgent with the given route's provider/model.
+
+        Args:
+            route: ModelRoute with provider and model selection.
+
+        Returns:
+            Configured WriterAgent instance.
+        """
+        if (
+            self._writer_agent is None
+            or self._writer_agent.provider != route.provider
+            or self._writer_agent.model != route.model
+        ):
+            self._writer_agent = WriterAgent(
+                provider=route.provider,
+                model=route.model,
+            )
+        return self._writer_agent
+
+    def _get_life_assistant_agent(self, route: ModelRoute) -> LifeAssistantAgent:
+        """Get or create a LifeAssistantAgent with the given route's provider/model.
+
+        Args:
+            route: ModelRoute with provider and model selection.
+
+        Returns:
+            Configured LifeAssistantAgent instance.
+        """
+        if (
+            self._life_assistant_agent is None
+            or self._life_assistant_agent.provider != route.provider
+            or self._life_assistant_agent.model != route.model
+        ):
+            self._life_assistant_agent = LifeAssistantAgent(
+                provider=route.provider,
+                model=route.model,
+            )
+        return self._life_assistant_agent
+
     def _direct_llm_response(
         self, user_input: str, route: ModelRoute
     ) -> str:
@@ -294,7 +524,22 @@ class Orchestrator:
         # Step 3: Execute berdasarkan task type
         response_text = ""
 
-        if task_type == "code":
+        if task_type == "search":
+            agent = self._get_web_search_agent(route)
+            response_text = agent.run(user_input)
+        elif task_type == "data":
+            agent = self._get_data_analyst_agent(route)
+            response_text = agent.run(user_input)
+        elif task_type == "schedule":
+            agent = self._get_scheduler_agent(route)
+            response_text = agent.run(user_input)
+        elif task_type == "write":
+            agent = self._get_writer_agent(route)
+            response_text = agent.run(user_input)
+        elif task_type == "life":
+            agent = self._get_life_assistant_agent(route)
+            response_text = agent.run(user_input)
+        elif task_type == "code":
             agent = self._get_coder_agent(route)
             response_text = agent.run(user_input)
         elif task_type == "research":
@@ -349,6 +594,16 @@ class Orchestrator:
             self._coder_agent.clear_history()
         if self._researcher_agent:
             self._researcher_agent.clear_history()
+        if self._web_search_agent:
+            self._web_search_agent.clear_history()
+        if self._data_analyst_agent:
+            self._data_analyst_agent.clear_history()
+        if self._scheduler_agent:
+            self._scheduler_agent.clear_history()
+        if self._writer_agent:
+            self._writer_agent.clear_history()
+        if self._life_assistant_agent:
+            self._life_assistant_agent.clear_history()
         logger.info("Memory cleared")
 
     def save_session(self, file_path: str) -> Dict[str, object]:

@@ -92,6 +92,10 @@ class ModelRouter:
         r"\b(algorithm|complexity|big.?o|mathematical)\b",
         r"\b(machine learning|deep learning|neural network|AI model)\b",
         r"\b(strateg|roadmap|planning|rencana besar)\b",
+        # Phase 3: complex data analysis and life decisions
+        r"\b(analisis data mendalam|complex analysis|regresi|regression model)\b",
+        r"\b(korelasi multivariat|multivariate|time series|forecasting)\b",
+        r"\b(decision framework|keputusan besar|life changing)\b",
     ]
 
     # Pattern MEDIUM: coding, file ops, pertanyaan teknis umum
@@ -104,6 +108,13 @@ class ModelRouter:
         r"\b(test|testing|unit test|validat)\b",
         r"\b(api|database|server|deploy|docker)\b",
         r"\b(python|javascript|java|rust|go|sql)\b",
+        # Phase 3: data analysis, scheduling, writing, life assistant tasks
+        r"\b(data|csv|excel|dataset|statistik|statistics)\b",
+        r"\b(grafik|chart|graph|visualisasi|visualization)\b",
+        r"\b(jadwal|schedule|deadline|reminder|calendar)\b",
+        r"\b(email|draft|proposal|artikel|article|konten)\b",
+        r"\b(mood|jurnal|habit|motivasi|saran|advice)\b",
+        r"\b(cari|search|berita|news|info terbaru|latest)\b",
     ]
 
     def __init__(self) -> None:
