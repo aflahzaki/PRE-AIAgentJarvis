@@ -293,7 +293,7 @@ class DatabaseManager:
             return {
                 "success": True,
                 "db_type": self.db_type,
-                "url": str(self.engine.url),
+                "url": self.engine.url.render_as_string(hide_password=True),
             }
         except Exception as e:
             # Try reconnecting
@@ -302,7 +302,7 @@ class DatabaseManager:
                 return {
                     "success": True,
                     "db_type": self.db_type,
-                    "url": str(self.engine.url),
+                    "url": self.engine.url.render_as_string(hide_password=True),
                     "reconnected": True,
                 }
             return {

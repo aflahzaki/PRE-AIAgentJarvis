@@ -254,8 +254,8 @@ class Orchestrator:
         if best_new_score >= 1 and code_score == 0 and research_score == 0:
             return best_new_type
 
-        # If best_new_score is 1 and it beats code/research, route to new agent
-        if best_new_score >= 1 and best_new_score >= code_score and best_new_score >= research_score:
+        # If best_new_score is 1 and it strictly beats code/research, route to new agent
+        if best_new_score >= 1 and best_new_score > code_score and best_new_score > research_score:
             return best_new_type
 
         # Consult the difficulty classifier for coherence check.

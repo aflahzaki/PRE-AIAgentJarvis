@@ -6,6 +6,10 @@ using pandas (with fallback to the built-in csv module when pandas is
 unavailable). All functions return structured dict results with
 success/error status.
 
+Security: All file operations are restricted to the workspace directory
+(configurable via JARVIS_WORKSPACE env var, defaults to current working dir).
+This prevents the LLM from reading/writing arbitrary system files.
+
 Dependencies:
     - pandas: Install with `pip install pandas` (optional, with csv fallback)
 """
@@ -16,6 +20,12 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
+
+# Workspace root for path restriction.
+# All file operations are confined to this directory.
+_WORKSPACE_ROOT = os.path.abspath(
+    os.getenv("JARVIS_WORKSPACE", os.getcwd())
+)
 
 # Graceful import of pandas
 try:
@@ -31,7 +41,10 @@ except ImportError:
 
 
 def _validate_file_path(file_path: str) -> Dict[str, Any]:
-    """Validate that a file path exists and is accessible.
+    """Validate that a file path exists, is accessible, and is within workspace.
+
+    Resolves the path to absolute and checks it is under the workspace root.
+    This prevents path traversal attacks (e.g., '../../etc/passwd').
 
     Args:
         file_path: Path to validate.
@@ -43,6 +56,15 @@ def _validate_file_path(file_path: str) -> Dict[str, Any]:
         return {"valid": False, "error": "File path cannot be empty."}
 
     abs_path = os.path.abspath(file_path)
+
+    # Ensure the resolved path is within the workspace root
+    if not abs_path.startswith(_WORKSPACE_ROOT + os.sep) and abs_path != _WORKSPACE_ROOT:
+        return {
+            "valid": False,
+            "error": "Access denied: path '{}' is outside the allowed workspace.".format(
+                file_path
+            ),
+        }
 
     if not os.path.exists(abs_path):
         return {

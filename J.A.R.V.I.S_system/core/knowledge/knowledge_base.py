@@ -59,7 +59,7 @@ class KnowledgeBase:
                     self.is_available = True
                     # Create tables if needed
                     from core.database.migrations import create_all_tables
-                    create_all_tables(self._db.engine)
+                    create_all_tables()
                     logger.info("KnowledgeBase: Initialized successfully")
                 else:
                     logger.warning(
