@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "title": "Enhanced RAG Pipeline + File Upload for Knowledge Base",
   "description": "Implement document_loader.py, rag_engine.py, upload_tools.py, upgrade embeddings.py, add upload endpoint to web dashboard, add upload UI to frontend, integrate RAG into orchestrator, update .env.example and requirements_v2.txt.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create core/knowledge/document_loader.py with multi-format file parser",
     "Create core/knowledge/rag_engine.py with enhanced RAG retrieval",
@@ -23,5 +23,10 @@
     "RAG only injects context when RAG_ENABLED=true",
     "TF-IDF remains the default embeddings engine",
     "Upload supports drag & drop in the web UI"
+  ],
+  "findings": [
+    "python-multipart package is required for FastAPI file uploads (added to requirements_v2.txt)",
+    "MySQL not available in sandbox, SQLite fallback works correctly",
+    "All 14 files (3 new + 8 modified + 3 task files) committed successfully"
   ]
 }
