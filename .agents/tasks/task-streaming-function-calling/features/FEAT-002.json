@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Upgrade BaseAgent to use native function calling with text-based fallback, and add process_stream() to the Orchestrator. Also add streaming endpoint to web dashboard and update the terminal REPL and frontend JS.",
+  "status": "completed",
+  "steps": [
+    "In J.A.R.V.I.S_system/core/agents/base_agent.py: Modify _call_provider_with_tools() to check self.provider.supports_function_calling() and self._tools - if both true, call self.provider.chat_completion_with_tools() with tools_schema; otherwise fall back to existing chat_completion(). Modify run() to check response.tool_calls first (native function calling path): if present, execute each tool, append assistant message with tool_calls metadata and tool role messages, then continue loop. If no native tool_calls, fall back to existing _parse_tool_calls_from_text() logic. Keep all existing error handling and self-healing loop intact.",
+    "In J.A.R.V.I.S_system/core/orchestrator.py: Add 'from typing import Generator' to imports. Add process_stream() method that classifies the task, routes via self.router, and for 'simple' tasks streams directly from the provider using stream_chat_completion(). For non-simple (agent) tasks, falls back to self.process() and yields the full response as a single chunk. Include memory management (add_message) after streaming completes.",
+    "In J.A.R.V.I.S_system/interfaces/web_dashboard/routes/chat.py: Add import for StreamingResponse from fastapi.responses. Add a new POST /api/chat/stream endpoint that uses the orchestrator's process_stream() method, wrapping each token as an SSE 'data: {token}\\n\\n' event, ending with 'data: [DONE]\\n\\n'. Keep the existing /api/chat endpoint completely unchanged.",
+    "In J.A.R.V.I.S_system/interfaces/web_dashboard/static/app.js: Add a new function sendMessageStreaming() that uses fetch with ReadableStream to consume the SSE /api/chat/stream endpoint. Update the chat form submit handler to call the streaming version, appending tokens to the message bubble in real-time. Fall back to the existing non-streaming apiFetch if streaming fails. Keep all existing utility functions and other sections unchanged.",
+    "In J.A.R.V.I.S_system/run_jarvis_v2.py: Add a new function process_input_streaming() that calls orchestrator.process_stream() and prints tokens one by one using console.print(token, end=''). Update the main loop to use process_input_streaming() with a try/except fallback to the existing process_input() if streaming fails."
+  ],
+  "acceptance_criteria": [
+    "BaseAgent._call_provider_with_tools() tries native function calling when provider supports it",
+    "BaseAgent.run() handles response.tool_calls for native path and falls back to text parsing",
+    "Orchestrator.process_stream() yields tokens for simple tasks, full response for agent tasks",
+    "POST /api/chat/stream endpoint exists and returns text/event-stream media type",
+    "Existing POST /api/chat endpoint remains unchanged and functional",
+    "app.js supports streaming display with fallback to non-streaming",
+    "run_jarvis_v2.py has streaming terminal output with fallback",
+    "All backward compatibility preserved - non-streaming paths still work",
+    "Import check passes for all modified modules"
+  ],
+  "verification": [
+    "Run: cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.agents.base_agent import BaseAgent; from core.orchestrator import Orchestrator; from interfaces.web_dashboard.routes.chat import router; import inspect; src = inspect.getsource(router); assert 'chat/stream' in src or 'chat_stream' in src; print('ALL CHECKS PASSED')\"",
+    "Run: cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.orchestrator import Orchestrator; assert hasattr(Orchestrator, 'process_stream'); print('process_stream exists')\"",
+    "Run: cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"import ast; ast.parse(open('run_jarvis_v2.py').read()); ast.parse(open('interfaces/web_dashboard/routes/chat.py').read()); ast.parse(open('core/agents/base_agent.py').read()); ast.parse(open('core/orchestrator.py').read()); print('ALL AST PARSE OK')\""
+  ],
+  "blocked_reason": null,
+  "findings": "Implementation completed successfully. All verification checks pass (AST parse, import checks, structural assertions). The inspect.getsource(router) verification from the feature spec does not work directly on APIRouter objects - used inspect.getsource(chat_module) instead. No f-strings used, all .format() style. Existing non-streaming paths fully preserved. Native function calling path in run() properly builds OpenAI-format messages with tool role and tool_call_id."
+}
