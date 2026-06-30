@@ -6,9 +6,10 @@ No API key needed. Supports unlimited requests, works offline.
 Ideal for CPU-only inference on local hardware.
 """
 
+import json
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 from openai import OpenAI
 
@@ -127,3 +128,117 @@ class OllamaProvider(BaseProvider):
         except Exception as e:
             logger.debug("Cannot list Ollama models: %s", str(e))
             return []
+
+    def stream_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Generator[str, None, None]:
+        """Stream chat completion response token by token from Ollama.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+            model: Ollama model name (e.g., 'llama3.2:3b', 'qwen2.5-coder:7b').
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens to generate.
+
+        Yields:
+            String tokens as they are generated.
+        """
+        try:
+            stream = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            logger.error("Ollama streaming error: {}".format(str(e)))
+
+    def supports_function_calling(self) -> bool:
+        """Check if Ollama supports native function calling.
+
+        Returns:
+            True, as Ollama supports function calling via its OpenAI-compatible API.
+        """
+        return True
+
+    def chat_completion_with_tools(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        tools: List[Dict[str, Any]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> ProviderResponse:
+        """Send chat completion request with function calling tools to Ollama.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+            model: Ollama model name (e.g., 'llama3.2:3b', 'qwen2.5-coder:7b').
+            tools: List of tool definitions in OpenAI function calling format.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens to generate.
+
+        Returns:
+            ProviderResponse with generated content and/or tool_calls.
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=tools,
+            )
+
+            msg = response.choices[0].message
+            content = msg.content or ""
+            tool_calls_list = []
+
+            if msg.tool_calls:
+                for tc in msg.tool_calls:
+                    tool_call_dict = {
+                        "id": tc.id,
+                        "name": tc.function.name,
+                        "arguments": json.loads(tc.function.arguments)
+                        if isinstance(tc.function.arguments, str)
+                        else tc.function.arguments,
+                    }
+                    tool_calls_list.append(tool_call_dict)
+
+            usage = {}
+            if response.usage:
+                usage = {
+                    "prompt_tokens": response.usage.prompt_tokens or 0,
+                    "completion_tokens": response.usage.completion_tokens or 0,
+                    "total_tokens": response.usage.total_tokens or 0,
+                }
+
+            return ProviderResponse(
+                content=content,
+                model=model,
+                provider=self.name,
+                usage=usage,
+                success=True,
+                tool_calls=tool_calls_list,
+            )
+
+        except Exception as e:
+            logger.warning(
+                "Ollama function calling failed, falling back to regular completion: {}".format(
+                    str(e)
+                )
+            )
+            return self.chat_completion(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )

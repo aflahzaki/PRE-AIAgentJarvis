@@ -6,10 +6,11 @@ Requires GROQ_API_KEY environment variable.
 Free tier with rate limits - includes rate limit awareness.
 """
 
+import json
 import logging
 import os
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 from openai import OpenAI
 
@@ -218,3 +219,156 @@ class GroqProvider(BaseProvider):
             "is_rate_limited": is_limited,
             "cooldown_remaining": max(0, int(self._rate_limited_until - now)) if is_limited else 0,
         }
+
+    def stream_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Generator[str, None, None]:
+        """Stream chat completion response token by token from Groq.
+
+        Checks rate limits before initiating the stream.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+            model: Groq model name (e.g., 'llama-3.3-70b-versatile').
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens to generate.
+
+        Yields:
+            String tokens as they are generated.
+        """
+        if not self.client:
+            logger.error("Groq streaming failed: API key not configured")
+            return
+
+        if not self._check_rate_limit():
+            logger.error("Groq streaming failed: rate limit reached")
+            return
+
+        try:
+            self._record_request()
+            stream = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str and "limit" in error_str:
+                self._rate_limited_until = time.time() + self.RATE_LIMIT_COOLDOWN_SECONDS
+            logger.error("Groq streaming error: {}".format(str(e)))
+
+    def supports_function_calling(self) -> bool:
+        """Check if Groq supports native function calling.
+
+        Returns:
+            True, as Groq supports function calling via its OpenAI-compatible API.
+        """
+        return True
+
+    def chat_completion_with_tools(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        tools: List[Dict[str, Any]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> ProviderResponse:
+        """Send chat completion request with function calling tools to Groq.
+
+        Includes rate limit checking before making the request.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+            model: Groq model name (e.g., 'llama-3.3-70b-versatile').
+            tools: List of tool definitions in OpenAI function calling format.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens to generate.
+
+        Returns:
+            ProviderResponse with generated content and/or tool_calls.
+        """
+        if not self.client:
+            return ProviderResponse(
+                content="",
+                model=model,
+                provider=self.name,
+                error="Groq API key not configured. Set GROQ_API_KEY in .env file.",
+                success=False,
+            )
+
+        if not self._check_rate_limit():
+            return ProviderResponse(
+                content="",
+                model=model,
+                provider=self.name,
+                error="Groq rate limit reached. Please wait before retrying.",
+                success=False,
+            )
+
+        try:
+            self._record_request()
+
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=tools,
+            )
+
+            msg = response.choices[0].message
+            content = msg.content or ""
+            tool_calls_list = []
+
+            if msg.tool_calls:
+                for tc in msg.tool_calls:
+                    tool_call_dict = {
+                        "id": tc.id,
+                        "name": tc.function.name,
+                        "arguments": json.loads(tc.function.arguments)
+                        if isinstance(tc.function.arguments, str)
+                        else tc.function.arguments,
+                    }
+                    tool_calls_list.append(tool_call_dict)
+
+            usage = {}
+            if response.usage:
+                usage = {
+                    "prompt_tokens": response.usage.prompt_tokens or 0,
+                    "completion_tokens": response.usage.completion_tokens or 0,
+                    "total_tokens": response.usage.total_tokens or 0,
+                }
+
+            return ProviderResponse(
+                content=content,
+                model=model,
+                provider=self.name,
+                usage=usage,
+                success=True,
+                tool_calls=tool_calls_list,
+            )
+
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str and "limit" in error_str:
+                self._rate_limited_until = time.time() + self.RATE_LIMIT_COOLDOWN_SECONDS
+            logger.warning(
+                "Groq function calling failed, falling back to regular completion: {}".format(
+                    str(e)
+                )
+            )
+            return self.chat_completion(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
