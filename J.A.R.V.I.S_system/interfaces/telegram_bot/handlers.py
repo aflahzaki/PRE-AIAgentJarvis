@@ -8,7 +8,7 @@ Messages exceeding Telegram's 4096 char limit are split automatically.
 
 import logging
 import os
-from typing import List
+from typing import List, Set
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -18,33 +18,56 @@ logger = logging.getLogger(__name__)
 # Maximum message length for Telegram
 MAX_MESSAGE_LENGTH = 4096
 
+# Cached allowed users set - parsed once at module load
+_ALLOWED_USERS: Set[int] = set()
 
-def _get_allowed_users() -> List[int]:
-    """Get list of allowed Telegram user IDs from environment.
+
+def _parse_allowed_users() -> Set[int]:
+    """Parse the TELEGRAM_ALLOWED_USERS environment variable.
 
     TELEGRAM_ALLOWED_USERS should be a comma-separated list of user IDs.
-    If not set or empty, no users are allowed (bot rejects all messages).
+    If not set or empty, returns an empty set (bot rejects all messages).
 
     Returns:
-        List of allowed user IDs as integers.
+        Set of allowed user IDs as integers.
     """
     allowed_str = os.environ.get("TELEGRAM_ALLOWED_USERS", "")
     if not allowed_str.strip():
-        return []
+        return set()
 
-    user_ids = []
+    user_ids: Set[int] = set()
     for uid in allowed_str.split(","):
         uid = uid.strip()
         if uid:
             try:
-                user_ids.append(int(uid))
+                user_ids.add(int(uid))
             except ValueError:
                 logger.warning("Invalid user ID in TELEGRAM_ALLOWED_USERS: %s", uid)
     return user_ids
 
 
+def initialize_allowed_users() -> None:
+    """Initialize the cached allowed users set from environment.
+
+    Call this once at bot startup to parse and cache the allowed user list.
+    """
+    global _ALLOWED_USERS
+    _ALLOWED_USERS = _parse_allowed_users()
+    if _ALLOWED_USERS:
+        logger.info(
+            "Allowed users configured: %d user(s).", len(_ALLOWED_USERS)
+        )
+    else:
+        logger.warning(
+            "TELEGRAM_ALLOWED_USERS not configured. Bot will deny all users."
+        )
+
+
 def _is_authorized(user_id: int) -> bool:
     """Check if a user is authorized to use the bot.
+
+    Uses the cached allowed users set for fast lookup without
+    re-parsing the environment variable on every message.
 
     Args:
         user_id: Telegram user ID to check.
@@ -52,14 +75,13 @@ def _is_authorized(user_id: int) -> bool:
     Returns:
         True if user is authorized, False otherwise.
     """
-    allowed_users = _get_allowed_users()
-    if not allowed_users:
+    if not _ALLOWED_USERS:
         # If no users configured, deny all access
         logger.warning(
             "TELEGRAM_ALLOWED_USERS not configured. Denying user %s.", user_id
         )
         return False
-    return user_id in allowed_users
+    return user_id in _ALLOWED_USERS
 
 
 def _split_message(text: str) -> List[str]:

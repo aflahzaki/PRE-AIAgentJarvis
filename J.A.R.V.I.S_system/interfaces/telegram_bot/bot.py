@@ -30,6 +30,7 @@ from interfaces.telegram_bot.handlers import (
     journal_handler,
     search_handler,
     message_handler,
+    initialize_allowed_users,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,9 @@ class TelegramBot:
 
         # Initialize the orchestrator
         self.orchestrator: Orchestrator = Orchestrator()
+
+        # Cache the allowed users list at startup
+        initialize_allowed_users()
 
         # Build the application
         self.application: Application = (

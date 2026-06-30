@@ -89,8 +89,11 @@ class TextToSpeech:
             return None
 
         try:
-            # Create temporary file for audio output
-            output_path = os.path.join(self.temp_dir, "jarvis_tts_output.mp3")
+            # Create a unique temporary file for audio output to avoid
+            # race conditions under concurrent use
+            import uuid
+            unique_name = "jarvis_tts_{}.mp3".format(uuid.uuid4().hex[:12])
+            output_path = os.path.join(self.temp_dir, unique_name)
 
             communicate = edge_tts.Communicate(text, self.voice)
             await communicate.save(output_path)

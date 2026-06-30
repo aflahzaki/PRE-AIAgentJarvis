@@ -190,7 +190,7 @@ def check_upcoming_deadlines() -> List[str]:
         return messages
 
     try:
-        now = datetime.utcnow()
+        now = datetime.now()
         deadline = now + timedelta(hours=24)
 
         upcoming_tasks = (

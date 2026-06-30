@@ -47,12 +47,13 @@ async def get_status():
 
     # Get database health
     try:
-        from core.database.db_manager import DatabaseManager
+        from interfaces.web_dashboard.database import get_db_manager
 
-        db = DatabaseManager()
-        status["database"] = db.health_check()
-    except ImportError:
-        status["database"] = {"success": False, "error": "Database modules not available"}
+        db = get_db_manager()
+        if db is not None:
+            status["database"] = db.health_check()
+        else:
+            status["database"] = {"success": False, "error": "Database not available"}
     except Exception as e:
         status["database"] = {"success": False, "error": str(e)}
 

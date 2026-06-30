@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Address review issues: CORS misconfiguration, Telegram allowed-users caching, DatabaseManager singleton for web routes, TTS temp file collision, and mixed UTC/local time in proactive triggers.",
+  "status": "in_progress",
+  "steps": [
+    "Fix CORS misconfiguration in interfaces/web_dashboard/app.py - Remove allow_credentials=True",
+    "Fix Telegram allowed-users re-parsed per message - Cache at bot init",
+    "Fix DatabaseManager instantiated per request in web routes - Create shared singleton",
+    "Fix TTS temp file collision - Use unique filenames",
+    "Fix mixed UTC/local time in proactive triggers - Use local time consistently"
+  ],
+  "acceptance_criteria": [
+    "app.py does not have allow_credentials=True with allow_origins=['*']",
+    "Telegram handlers use a cached allowed_users list instead of re-parsing env per message",
+    "Web routes share a single DatabaseManager instance",
+    "TTS generates unique filenames for each audio file",
+    "Proactive triggers use datetime.now() consistently instead of mixing utcnow()"
+  ],
+  "verification": [
+    "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from interfaces.web_dashboard.app import app; from interfaces.telegram_bot.bot import TelegramBot; from interfaces.voice.text_to_speech import TextToSpeech; from interfaces.proactive.triggers import check_upcoming_deadlines; print('All imports OK')\"",
+    "grep -c 'allow_credentials' J.A.R.V.I.S_system/interfaces/web_dashboard/app.py | grep 0",
+    "grep -c 'utcnow' J.A.R.V.I.S_system/interfaces/proactive/triggers.py | grep 0"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}

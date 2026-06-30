@@ -73,15 +73,15 @@ async def list_tasks(
         List of task objects.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Task
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -122,15 +122,15 @@ async def create_task(request: TaskCreate):
         raise HTTPException(status_code=400, detail="Task title is required.")
 
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Task
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -182,15 +182,15 @@ async def update_task(task_id: int, request: TaskUpdate):
         Updated task object.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Task
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -251,15 +251,15 @@ async def delete_task(task_id: int):
         Success confirmation.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Task
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."

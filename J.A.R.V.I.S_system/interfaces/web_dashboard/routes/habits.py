@@ -66,15 +66,15 @@ async def list_habits():
         List of habits with last 7 days of logs.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Habit
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -122,15 +122,15 @@ async def create_habit(request: HabitCreate):
         )
 
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Habit
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -170,15 +170,15 @@ async def log_habit(habit_id: int, request: HabitLogCreate):
         Created log entry.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Habit, HabitLog
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."

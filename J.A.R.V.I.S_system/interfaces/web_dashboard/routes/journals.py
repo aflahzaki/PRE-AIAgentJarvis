@@ -51,15 +51,15 @@ async def list_journals():
         List of journal entries.
     """
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Journal
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
@@ -106,15 +106,15 @@ async def create_journal(request: JournalCreate):
         )
 
     try:
-        from core.database.db_manager import DatabaseManager
         from core.database.models import Journal
     except ImportError:
         raise HTTPException(
             status_code=503, detail="Database modules not available."
         )
 
-    db = DatabaseManager()
-    session = db.get_session()
+    from interfaces.web_dashboard.database import get_session
+
+    session = get_session()
     if session is None:
         raise HTTPException(
             status_code=503, detail="Database connection unavailable."
