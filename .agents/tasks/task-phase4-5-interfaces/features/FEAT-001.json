@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create Telegram Bot interface (interfaces/telegram_bot/) with bot.py, handlers.py, __init__.py, and README_TELEGRAM.md. Also create run_telegram.py entry point.",
+  "status": "in_progress",
+  "steps": [
+    "Create J.A.R.V.I.S_system/interfaces/__init__.py (empty or minimal)",
+    "Create J.A.R.V.I.S_system/interfaces/telegram_bot/__init__.py with TelegramBot class export",
+    "Create J.A.R.V.I.S_system/interfaces/telegram_bot/bot.py - Main TelegramBot class using python-telegram-bot>=20.0 async. Initialize with TELEGRAM_BOT_TOKEN from env. Register handlers from handlers.py. Graceful startup/shutdown. Import and use core.orchestrator.Orchestrator for processing messages.",
+    "Create J.A.R.V.I.S_system/interfaces/telegram_bot/handlers.py - Implement command handlers: /start (welcome), /help (command list), /status (orchestrator.get_status()), /tasks (list today tasks via scheduler_tools.get_today_tasks()), /addtask <title> (add_task), /journal (prompt journal), /search <query> (web search via orchestrator.process). Default text handler sends to orchestrator.process() and returns response. Split messages > 4096 chars. Security: only respond to TELEGRAM_ALLOWED_USERS from env.",
+    "Create J.A.R.V.I.S_system/interfaces/telegram_bot/README_TELEGRAM.md - Setup guide for BotFather, getting token, setting env vars, running",
+    "Create J.A.R.V.I.S_system/run_telegram.py - Entry point that loads dotenv, sets sys.path, imports and runs TelegramBot"
+  ],
+  "acceptance_criteria": [
+    "J.A.R.V.I.S_system/interfaces/telegram_bot/bot.py is importable without error (when python-telegram-bot is installed)",
+    "J.A.R.V.I.S_system/interfaces/telegram_bot/handlers.py defines all required command handlers",
+    "run_telegram.py exists and is syntactically valid",
+    "TELEGRAM_ALLOWED_USERS check is implemented for security",
+    "Messages > 4096 chars are split before sending"
+  ],
+  "verification": [
+    "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from interfaces.telegram_bot.bot import TelegramBot; print('Telegram OK')\"",
+    "python -c \"import ast; ast.parse(open('J.A.R.V.I.S_system/run_telegram.py').read()); print('run_telegram.py valid')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
