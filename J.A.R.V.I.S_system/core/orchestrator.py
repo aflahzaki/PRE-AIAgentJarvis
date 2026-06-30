@@ -128,7 +128,8 @@ class Orchestrator:
     # Pattern: writing/content creation tasks
     WRITE_PATTERNS = [
         r"\b(tulis|tuliskan|write|compose)\b",
-        r"\b(buat email|write email|email formal|email template)\b",
+        r"\b(buat(?:kan)?\s+(?:email|surat|draft|proposal|caption|artikel))\b",
+        r"\b(email|e-mail)\b",
         r"\b(draft|draf|rangkuman|summary)\b",
         r"\b(proposal|laporan|report)\b",
         r"\b(caption|copywriting|konten|content)\b",
