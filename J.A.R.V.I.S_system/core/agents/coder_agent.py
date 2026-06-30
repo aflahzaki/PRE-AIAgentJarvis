@@ -98,7 +98,7 @@ class CoderAgent(BaseAgent):
         # Tool: read_file
         self.register_tool(
             name="read_file",
-            func=read_file,
+            func=self._read_file_with_memory,
             description="Read the contents of a file. Returns the file content as text.",
             parameters={
                 "type": "object",
@@ -119,7 +119,7 @@ class CoderAgent(BaseAgent):
         # Tool: write_file
         self.register_tool(
             name="write_file",
-            func=write_file,
+            func=self._write_file_with_memory,
             description="Write content to a file. Creates parent directories if needed.",
             parameters={
                 "type": "object",
@@ -198,7 +198,7 @@ class CoderAgent(BaseAgent):
         # Tool: execute_python
         self.register_tool(
             name="execute_python",
-            func=execute_python,
+            func=self._execute_python_with_memory,
             description="Execute a Python script file. Returns stdout, stderr, and exit code.",
             parameters={
                 "type": "object",
@@ -223,7 +223,7 @@ class CoderAgent(BaseAgent):
         # Tool: execute_python_code
         self.register_tool(
             name="execute_python_code",
-            func=execute_python_code,
+            func=self._execute_python_code_with_memory,
             description=(
                 "Execute Python code string directly. Creates a temp file and runs it. "
                 "Returns stdout, stderr, and exit code."
@@ -249,6 +249,60 @@ class CoderAgent(BaseAgent):
         )
 
         logger.info("CoderAgent: Registered %d tools", len(self._tools))
+
+    # --- Memory-aware tool wrappers ---
+
+    def _read_file_with_memory(self, **kwargs):
+        """Read a file and remember the current file in agent memory."""
+        result = read_file(**kwargs)
+        file_path = kwargs.get("file_path", "")
+        if file_path:
+            self.agent_memory.set("current_file", file_path)
+            self.agent_memory.append_action("read_file", file_path)
+        return result
+
+    def _write_file_with_memory(self, **kwargs):
+        """Write a file and remember it in agent memory."""
+        result = write_file(**kwargs)
+        file_path = kwargs.get("file_path", "")
+        if file_path:
+            self.agent_memory.set("current_file", file_path)
+            self.agent_memory.append_action("write_file", file_path)
+        return result
+
+    def _execute_python_with_memory(self, **kwargs):
+        """Execute a Python script and record the result in memory."""
+        result = execute_python(**kwargs)
+        script_path = kwargs.get("script_path", "")
+        # Determine success/failure from result
+        if isinstance(result, dict):
+            exit_code = result.get("exit_code", -1)
+            status = "success" if exit_code == 0 else "failure"
+        else:
+            status = "executed"
+        self.agent_memory.set("last_execution_result", status)
+        self.agent_memory.append_action(
+            "execute_python", "{} -> {}".format(script_path, status)
+        )
+        return result
+
+    def _execute_python_code_with_memory(self, **kwargs):
+        """Execute Python code and record the result in memory."""
+        result = execute_python_code(**kwargs)
+        # Determine success/failure from result
+        if isinstance(result, dict):
+            exit_code = result.get("exit_code", -1)
+            status = "success" if exit_code == 0 else "failure"
+            stderr = result.get("stderr", "")
+            if exit_code != 0 and stderr:
+                # Store recent error for context
+                error_summary = stderr[:200] if len(stderr) > 200 else stderr
+                self.agent_memory.set("last_error", error_summary)
+        else:
+            status = "executed"
+        self.agent_memory.set("last_execution_result", status)
+        self.agent_memory.append_action("execute_code", status)
+        return result
 
     def get_agent_type(self) -> str:
         """Get the agent type identifier.

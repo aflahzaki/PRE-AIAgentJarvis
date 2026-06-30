@@ -28,6 +28,7 @@ from core.agents.data_analyst_agent import DataAnalystAgent
 from core.agents.scheduler_agent import SchedulerAgent
 from core.agents.writer_agent import WriterAgent
 from core.agents.life_assistant_agent import LifeAssistantAgent
+from core.memory.cache import ResponseCache
 from core.memory.conversation import ConversationMemory
 from core.model_router import Difficulty, ModelRoute, ModelRouter
 from core.providers.base_provider import BaseProvider, ProviderResponse
@@ -148,8 +149,8 @@ class Orchestrator:
     def __init__(self, memory_size: int = 50) -> None:
         """Initialize the Orchestrator.
 
-        Sets up the model router, conversation memory, and checks
-        provider availability.
+        Sets up the model router, conversation memory, response cache,
+        and checks provider availability.
 
         Args:
             memory_size: Maximum messages to keep in conversation buffer.
@@ -159,6 +160,9 @@ class Orchestrator:
 
         # Conversation memory untuk konteks antar-turn
         self.memory = ConversationMemory(max_messages=memory_size)
+
+        # Response cache for direct LLM responses (disable-able via env)
+        self.cache = self._init_cache()
 
         # Cache agents - dibuat on-demand saat pertama kali dibutuhkan
         self._coder_agent = None  # type: Optional[CoderAgent]
@@ -173,6 +177,36 @@ class Orchestrator:
         self.router.check_providers()
 
         logger.info("Orchestrator initialized. Provider status: %s", self.get_status())
+
+    def _init_cache(self) -> Optional[ResponseCache]:
+        """Initialize the response cache based on environment configuration.
+
+        Reads CACHE_ENABLED, CACHE_TTL_SECONDS, and CACHE_MAX_SIZE from
+        environment variables to configure the cache. Returns None if
+        caching is disabled.
+
+        Returns:
+            ResponseCache instance, or None if caching is disabled.
+        """
+        import os
+
+        cache_enabled = os.environ.get("CACHE_ENABLED", "true").lower()
+        if cache_enabled not in ("true", "1", "yes"):
+            logger.info("Response cache disabled via CACHE_ENABLED=%s", cache_enabled)
+            return None
+
+        ttl = int(os.environ.get("CACHE_TTL_SECONDS", "3600"))
+        max_size = int(os.environ.get("CACHE_MAX_SIZE", "100"))
+
+        cache = ResponseCache(
+            max_size=max_size,
+            ttl_seconds=ttl,
+            cache_file="data/cache/response_cache.json",
+        )
+        logger.info(
+            "Response cache enabled: max_size=%d, ttl=%ds", max_size, ttl
+        )
+        return cache
 
     def classify_task(self, user_input: str) -> str:
         """Classify user input into task type for agent routing.
@@ -459,7 +493,8 @@ class Orchestrator:
 
         Used for simple queries that don't need tool calling or
         specialized agent logic. Injects relevant knowledge base
-        context via RAG when RAG_ENABLED=true.
+        context via RAG when RAG_ENABLED=true. Checks the response
+        cache first to avoid redundant API calls.
 
         Args:
             user_input: The user's message.
@@ -487,6 +522,13 @@ class Orchestrator:
         # User message saat ini
         messages.append({"role": "user", "content": user_input})
 
+        # Check cache first (only for direct LLM, not agent responses)
+        if self.cache is not None:
+            cached = self.cache.get(messages, route.model)
+            if cached:
+                logger.debug("Cache hit for direct LLM response")
+                return cached
+
         # Panggil provider
         response = route.provider.chat_completion(
             messages=messages,
@@ -496,6 +538,9 @@ class Orchestrator:
         )
 
         if response.success:
+            # Store in cache
+            if self.cache is not None:
+                self.cache.put(messages, route.model, response.content)
             return response.content
         else:
             return (
@@ -688,17 +733,22 @@ class Orchestrator:
         """Get current system status including provider availability.
 
         Returns:
-            Dict with provider status, memory info, and configuration.
+            Dict with provider status, memory info, cache stats, and configuration.
         """
         router_status = self.router.get_status()
-        return {
+        status = {
             "providers": router_status,
             "memory": {
                 "messages": self.memory.message_count,
                 "has_summary": self.memory.has_summary,
                 "max_messages": self.memory.max_messages,
             },
-        }
+        }  # type: Dict[str, object]
+
+        if self.cache is not None:
+            status["cache"] = self.cache.get_stats()
+
+        return status
 
     def refresh_providers(self) -> None:
         """Re-check provider availability.

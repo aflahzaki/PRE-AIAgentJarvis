@@ -14,6 +14,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from core.memory.agent_memory import AgentMemory
 from core.providers.base_provider import BaseProvider, ProviderResponse
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,9 @@ class BaseAgent(ABC):
 
         # System prompt dengan personality traits
         self.system_prompt = system_prompt or self._default_system_prompt()
+
+        # Per-agent persistent memory
+        self.agent_memory = AgentMemory(self.name)
 
         # Tool registry: nama -> (callable, schema_dict)
         self._tools = {}  # type: Dict[str, Tuple[Callable[..., Any], Dict[str, Any]]]
@@ -179,7 +183,8 @@ class BaseAgent(ABC):
     def _build_messages(self, user_input: str) -> List[Dict[str, Any]]:
         """Build the full message list for the LLM API call.
 
-        Includes system prompt, history, and current user input.
+        Includes system prompt, agent context from memory, history,
+        and current user input.
 
         Args:
             user_input: Current user message.
@@ -194,6 +199,14 @@ class BaseAgent(ABC):
             "role": "system",
             "content": self.system_prompt,
         })
+
+        # Inject agent context from persistent memory
+        context = self.agent_memory.get_context_summary()
+        if context:
+            messages.append({
+                "role": "system",
+                "content": "[Agent Context]\n{}\n[End Context]".format(context),
+            })
 
         # Tambahkan history (tanpa system messages dari history)
         for msg in self._messages:
