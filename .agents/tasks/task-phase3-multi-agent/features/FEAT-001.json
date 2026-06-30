@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Database layer: db_manager.py (SQLAlchemy connection manager with MySQL/SQLite fallback), models.py (all 6 table definitions as SQLAlchemy ORM models), and migrations.py (idempotent auto-create tables script). Also update requirements_v2.txt with all new dependencies and update .env.example with MySQL config.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create J.A.R.V.I.S_system/core/database/__init__.py with module docstring and exports",
     "Create J.A.R.V.I.S_system/core/database/db_manager.py: DatabaseManager class with connection pooling via SQLAlchemy create_engine. Support MySQL (pymysql driver) with fallback to SQLite. Read config from env vars (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_FALLBACK_SQLITE). Include get_session(), get_engine(), auto-reconnect logic. Wrap sqlalchemy import in try/except - if unavailable, class still loads but methods return error dicts.",
@@ -24,5 +24,5 @@
     "cd /projects/sandbox/PRE-AIAgentJarvis/J.A.R.V.I.S_system && python -c \"from core.database.db_manager import DatabaseManager; dm = DatabaseManager(); print('Fallback:', dm.engine.url if hasattr(dm, 'engine') and dm.engine else 'graceful')\""
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "SQLAlchemy 2.0+ DeclarativeBase requires __allow_unmapped__ = True when using Column() with type annotations. SQLite fallback works correctly. The existing test_command fails due to missing openai module - this is pre-existing and not caused by database changes. pyenv global 3.11.15 was needed to set Python version."
 }
