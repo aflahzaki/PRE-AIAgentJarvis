@@ -18,6 +18,7 @@ from core.agents.base_agent import BaseAgent
 from core.providers.base_provider import BaseProvider
 from core.tools.file_tools import read_file, write_file, list_files, edit_file
 from core.tools.python_executor import execute_python, execute_python_code
+from core.tools.sandbox import execute_sandboxed, check_code_safety
 
 logger = logging.getLogger(__name__)
 
@@ -287,8 +288,21 @@ class CoderAgent(BaseAgent):
         return result
 
     def _execute_python_code_with_memory(self, **kwargs):
-        """Execute Python code and record the result in memory."""
-        result = execute_python_code(**kwargs)
+        """Execute Python code with sandbox safety checks and record the result."""
+        code = kwargs.get("code", "")
+        timeout = kwargs.get("timeout", 30)
+
+        # Use sandboxed execution for user-provided code
+        result = execute_sandboxed(code=code, timeout=timeout)
+
+        # Log any safety warnings
+        warnings = result.get("warnings", [])
+        if warnings:
+            logger.warning(
+                "CoderAgent: Safety warnings for executed code: %s",
+                "; ".join(warnings),
+            )
+
         # Determine success/failure from result
         if isinstance(result, dict):
             exit_code = result.get("exit_code", -1)

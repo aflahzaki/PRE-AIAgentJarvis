@@ -9,6 +9,58 @@
     'use strict';
 
     // ============================================
+    // Authentication
+    // ============================================
+
+    var authToken = localStorage.getItem('jarvis_auth_token') || '';
+
+    function showLoginModal() {
+        var modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+
+    function hideLoginModal() {
+        var modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    window.doLogin = function () {
+        var tokenInput = document.getElementById('login-token');
+        var token = tokenInput ? tokenInput.value.trim() : '';
+        if (!token) return;
+
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token }),
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    throw new Error('Invalid token');
+                }
+                return resp.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('jarvis_auth_token', authToken);
+                    hideLoginModal();
+                    // Clear error message
+                    var errorEl = document.getElementById('login-error');
+                    if (errorEl) errorEl.textContent = '';
+                }
+            })
+            .catch(function (err) {
+                var errorEl = document.getElementById('login-error');
+                if (errorEl) errorEl.textContent = 'Invalid token. Please try again.';
+            });
+    };
+
+    // ============================================
     // API Wrapper
     // ============================================
 
@@ -17,14 +69,22 @@
     async function apiFetch(endpoint, options = {}) {
         const url = API_BASE + endpoint;
         const config = {
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken,
+                ...(options.headers || {}),
             },
-            ...options,
         };
 
         try {
             const response = await fetch(url, config);
+
+            if (response.status === 401) {
+                showLoginModal();
+                throw new Error('Unauthorized');
+            }
+
             const data = await response.json();
 
             if (!response.ok) {
@@ -127,7 +187,10 @@
         try {
             var response = await fetch(API_BASE + '/chat/stream', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken,
+                },
                 body: JSON.stringify({ message: message }),
             });
 
@@ -489,6 +552,9 @@
 
                 var response = await fetch(API_BASE + '/knowledge/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                    },
                     body: formData,
                 });
 

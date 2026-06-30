@@ -17,10 +17,11 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Request, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
+    from starlette.middleware.base import BaseHTTPMiddleware
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -47,6 +48,11 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Add authentication middleware
+    from interfaces.web_dashboard.auth import auth_middleware, WEB_AUTH_TOKEN
+
+    app.add_middleware(BaseHTTPMiddleware, dispatch=auth_middleware)
 
     # Shared orchestrator instance
     _orchestrator: Optional[object] = None
@@ -90,6 +96,15 @@ else:
     app.include_router(journals_router)
     app.include_router(habits_router)
     app.include_router(status_router)
+
+    @app.post("/api/auth/login")
+    async def login(request: Request):
+        """Validate token and return success."""
+        body = await request.json()
+        token = body.get("token", "")
+        if token == WEB_AUTH_TOKEN:
+            return {"success": True, "token": token}
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     # Serve static files
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
