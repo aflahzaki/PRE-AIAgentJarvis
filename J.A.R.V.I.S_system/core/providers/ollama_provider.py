@@ -160,6 +160,7 @@ class OllamaProvider(BaseProvider):
                     yield chunk.choices[0].delta.content
         except Exception as e:
             logger.error("Ollama streaming error: {}".format(str(e)))
+            yield "[Error: Ollama streaming failed - {}]".format(str(e))
 
     def supports_function_calling(self) -> bool:
         """Check if Ollama supports native function calling.
@@ -204,12 +205,17 @@ class OllamaProvider(BaseProvider):
 
             if msg.tool_calls:
                 for tc in msg.tool_calls:
+                    # Store in OpenAI wire format: nested with arguments as JSON string
+                    arguments_str = tc.function.arguments
+                    if not isinstance(arguments_str, str):
+                        arguments_str = json.dumps(arguments_str, ensure_ascii=False)
                     tool_call_dict = {
                         "id": tc.id,
-                        "name": tc.function.name,
-                        "arguments": json.loads(tc.function.arguments)
-                        if isinstance(tc.function.arguments, str)
-                        else tc.function.arguments,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": arguments_str,
+                        },
                     }
                     tool_calls_list.append(tool_call_dict)
 

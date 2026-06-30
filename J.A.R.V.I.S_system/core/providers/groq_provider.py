@@ -242,10 +242,12 @@ class GroqProvider(BaseProvider):
         """
         if not self.client:
             logger.error("Groq streaming failed: API key not configured")
+            yield "[Error: Groq API key not configured]"
             return
 
         if not self._check_rate_limit():
             logger.error("Groq streaming failed: rate limit reached")
+            yield "[Error: Groq rate limit reached]"
             return
 
         try:
@@ -265,6 +267,7 @@ class GroqProvider(BaseProvider):
             if "rate" in error_str and "limit" in error_str:
                 self._rate_limited_until = time.time() + self.RATE_LIMIT_COOLDOWN_SECONDS
             logger.error("Groq streaming error: {}".format(str(e)))
+            yield "[Error: Groq streaming failed - {}]".format(str(e))
 
     def supports_function_calling(self) -> bool:
         """Check if Groq supports native function calling.
@@ -331,12 +334,17 @@ class GroqProvider(BaseProvider):
 
             if msg.tool_calls:
                 for tc in msg.tool_calls:
+                    # Store in OpenAI wire format: nested with arguments as JSON string
+                    arguments_str = tc.function.arguments
+                    if not isinstance(arguments_str, str):
+                        arguments_str = json.dumps(arguments_str, ensure_ascii=False)
                     tool_call_dict = {
                         "id": tc.id,
-                        "name": tc.function.name,
-                        "arguments": json.loads(tc.function.arguments)
-                        if isinstance(tc.function.arguments, str)
-                        else tc.function.arguments,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": arguments_str,
+                        },
                     }
                     tool_calls_list.append(tool_call_dict)
 

@@ -170,7 +170,13 @@
                             // Stream complete
                             break;
                         }
-                        fullResponse += data;
+                        try {
+                            var token = JSON.parse(data);
+                            fullResponse += token;
+                        } catch (parseErr) {
+                            // Fallback: use raw data if JSON parse fails
+                            fullResponse += data;
+                        }
                         contentEl.textContent = fullResponse;
                         scrollChatToBottom();
                     }

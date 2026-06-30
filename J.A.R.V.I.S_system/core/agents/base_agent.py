@@ -347,8 +347,9 @@ class BaseAgent(ABC):
         messages = self._build_messages(user_input)
 
         # Tambahkan instruksi tool calling jika ada tools terdaftar
-        # (needed for text-based fallback even when native function calling is used)
-        if self._tools:
+        # Only inject text-based tool instruction when native function calling
+        # is NOT being used, to avoid wasting tokens and confusing the model
+        if self._tools and not self.provider.supports_function_calling():
             tool_instruction = self._build_tool_instruction()
             # Sisipkan setelah system prompt
             messages.insert(1, {
@@ -397,11 +398,13 @@ class BaseAgent(ABC):
                 for tool_call in response.tool_calls:
                     has_tool_calls = True
                     tool_call_id = tool_call.get("id", "")
-                    # Provider returns flat structure: {"id": ..., "name": ..., "arguments": ...}
-                    tool_name = tool_call.get("name", "")
-                    arguments_raw = tool_call.get("arguments", {})
+                    # Provider returns OpenAI wire format:
+                    # {"id": ..., "type": "function", "function": {"name": ..., "arguments": ...}}
+                    func_info = tool_call.get("function", {})
+                    tool_name = func_info.get("name", "")
+                    arguments_raw = func_info.get("arguments", "{}")
 
-                    # Parse arguments - may be a JSON string or already a dict
+                    # Parse arguments - should be a JSON string in wire format
                     if isinstance(arguments_raw, str):
                         try:
                             arguments = json.loads(arguments_raw)

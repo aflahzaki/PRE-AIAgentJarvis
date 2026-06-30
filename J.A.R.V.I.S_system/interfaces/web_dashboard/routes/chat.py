@@ -6,6 +6,7 @@ orchestrator and receiving AI-generated responses.
 Also provides POST /api/chat/stream for Server-Sent Events streaming.
 """
 
+import json
 import logging
 from typing import Optional
 
@@ -103,11 +104,11 @@ async def chat_stream(request: ChatRequest):
         """Async generator that wraps the sync process_stream generator."""
         try:
             for token in orchestrator.process_stream(request.message.strip()):
-                yield "data: {}\n\n".format(token)
+                yield "data: {}\n\n".format(json.dumps(token))
             yield "data: [DONE]\n\n"
         except Exception as e:
             logger.error("Stream processing error: %s", str(e))
-            yield "data: Error: {}\n\n".format(str(e))
+            yield "data: {}\n\n".format(json.dumps("Error: {}".format(str(e))))
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")

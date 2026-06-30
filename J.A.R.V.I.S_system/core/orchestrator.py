@@ -42,6 +42,17 @@ class Orchestrator:
     Determines the best approach for each request and delegates accordingly.
     """
 
+    # Shared system prompt for direct LLM responses (simple tasks)
+    _SIMPLE_SYSTEM_PROMPT = (
+        "You are J.A.R.V.I.S, a calm, helpful, and honest AI assistant.\n\n"
+        "Core traits:\n"
+        "- Jujur: Jika tidak tahu, katakan 'Saya tidak yakin' - jangan mengarang\n"
+        "- Helpful: Berikan jawaban yang ringkas dan berguna\n"
+        "- Humble: Akui keterbatasan dengan jujur\n\n"
+        "Respond naturally and concisely. Use Indonesian or English depending "
+        "on the user's language."
+    )
+
     # Keyword patterns untuk mendeteksi tipe task
     # Pattern: code/file related tasks
     CODE_PATTERNS = [
@@ -457,17 +468,7 @@ class Orchestrator:
             LLM response string.
         """
         # Build messages dengan system prompt JARVIS
-        system_prompt = (
-            "You are J.A.R.V.I.S, a calm, helpful, and honest AI assistant.\n\n"
-            "Core traits:\n"
-            "- Jujur: Jika tidak tahu, katakan 'Saya tidak yakin' - jangan mengarang\n"
-            "- Helpful: Berikan jawaban yang ringkas dan berguna\n"
-            "- Humble: Akui keterbatasan dengan jujur\n\n"
-            "Respond naturally and concisely. Use Indonesian or English depending "
-            "on the user's language."
-        )
-
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [{"role": "system", "content": self._SIMPLE_SYSTEM_PROMPT}]
 
         # Tambahkan context dari memory jika ada
         history = self.memory.get_messages(include_summary=True)
@@ -593,17 +594,7 @@ class Orchestrator:
 
             if task_type == "simple":
                 # Stream directly from provider for simple tasks
-                system_prompt = (
-                    "You are J.A.R.V.I.S, a calm, helpful, and honest AI assistant.\n\n"
-                    "Core traits:\n"
-                    "- Jujur: Jika tidak tahu, katakan 'Saya tidak yakin' - jangan mengarang\n"
-                    "- Helpful: Berikan jawaban yang ringkas dan berguna\n"
-                    "- Humble: Akui keterbatasan dengan jujur\n\n"
-                    "Respond naturally and concisely. Use Indonesian or English depending "
-                    "on the user's language."
-                )
-
-                messages = [{"role": "system", "content": system_prompt}]
+                messages = [{"role": "system", "content": self._SIMPLE_SYSTEM_PROMPT}]
 
                 # Add context from memory
                 history = self.memory.get_messages(include_summary=True)
@@ -623,6 +614,12 @@ class Orchestrator:
                 ):
                     full_response += token
                     yield token
+
+                # Check if the response is an error indicator from the provider
+                if full_response.startswith("[Error:"):
+                    logger.warning(
+                        "Provider stream returned error: %s", full_response
+                    )
 
                 # Add to memory after streaming completes
                 self.memory.add_message("user", user_input)
