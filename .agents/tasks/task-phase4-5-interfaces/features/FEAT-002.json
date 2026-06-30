@@ -1,0 +1,37 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Create Web Dashboard interface (interfaces/web_dashboard/) with FastAPI backend, API routes (chat, tasks, knowledge, journals, habits, status), static frontend (index.html, style.css, app.js), README_WEB.md, and run_web.py entry point.",
+  "status": "in_progress",
+  "steps": [
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/__init__.py",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/app.py - FastAPI application with CORS enabled, serve static files from static/, mount API routes, startup event to init Orchestrator. Use graceful import (if fastapi not installed, show warning).",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/__init__.py",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/chat.py - POST /api/chat endpoint that takes {'message': str} and returns orchestrator.process() result",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/tasks.py - GET /api/tasks (list with optional status/category filters), POST /api/tasks (create), PUT /api/tasks/{id} (update), DELETE /api/tasks/{id}. Use core.database.db_manager and core.database.models.Task directly via SQLAlchemy sessions.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/knowledge.py - GET /api/knowledge (list all), POST /api/knowledge (create), GET /api/knowledge/search?q=... (search). Use core.tools.knowledge_tools functions.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/journals.py - GET /api/journals (list), POST /api/journals (create). Use core.database.models.Journal.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/habits.py - GET /api/habits (list), POST /api/habits (create), POST /api/habits/{id}/log (log completion). Use core.database.models.Habit and HabitLog.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/routes/status.py - GET /api/status returning orchestrator.get_status() plus db health info",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/static/index.html - Single-page dashboard with sidebar nav (Chat, Tasks, Knowledge, Journal, Habits, Status), main content area. Chat interface with ChatGPT-like message bubbles and input. Tasks with CRUD UI. Knowledge searchable list. Journal with date/mood/content form. Habits with checklist. Status panel.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/static/style.css - Modern dark theme with JARVIS cyan/teal (#00bcd4) accent, dark backgrounds (#1a1a2e, #16213e), system-ui font, responsive layout, smooth transitions, holographic feel",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/static/app.js - Vanilla JavaScript SPA: fetch wrapper for API, simple router (show/hide sections), chat with auto-scroll and typing indicator, tasks CRUD with filter, knowledge search, journal form, habits checklist, status display. No framework needed.",
+    "Create J.A.R.V.I.S_system/interfaces/web_dashboard/README_WEB.md - Setup guide",
+    "Create J.A.R.V.I.S_system/run_web.py - Entry point that loads dotenv, sets sys.path, starts uvicorn on WEB_HOST:WEB_PORT (default 0.0.0.0:8000)"
+  ],
+  "acceptance_criteria": [
+    "FastAPI app is importable and creates valid ASGI application",
+    "All 6 route modules are importable",
+    "index.html is a complete SPA with all sections",
+    "style.css implements dark JARVIS theme",
+    "app.js handles all API interactions without external frameworks",
+    "run_web.py is syntactically valid",
+    "CORS is properly configured in app.py"
+  ],
+  "verification": [
+    "python -c \"import sys; sys.path.insert(0, 'J.A.R.V.I.S_system'); from interfaces.web_dashboard.app import app; print('Web dashboard OK')\"",
+    "python -c \"import ast; ast.parse(open('J.A.R.V.I.S_system/run_web.py').read()); print('run_web.py valid')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

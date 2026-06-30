@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S - AI Assistant Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">&#9670;</span>
+                    <span class="logo-text">J.A.R.V.I.S</span>
+                </div>
+                <p class="logo-subtitle">AI Assistant v2.0</p>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-section="chat">
+                    <span class="nav-icon">&#9993;</span>
+                    <span class="nav-label">Chat</span>
+                </li>
+                <li class="nav-item" data-section="tasks">
+                    <span class="nav-icon">&#9745;</span>
+                    <span class="nav-label">Tasks</span>
+                </li>
+                <li class="nav-item" data-section="knowledge">
+                    <span class="nav-icon">&#9733;</span>
+                    <span class="nav-label">Knowledge</span>
+                </li>
+                <li class="nav-item" data-section="journal">
+                    <span class="nav-icon">&#9998;</span>
+                    <span class="nav-label">Journal</span>
+                </li>
+                <li class="nav-item" data-section="habits">
+                    <span class="nav-icon">&#10003;</span>
+                    <span class="nav-label">Habits</span>
+                </li>
+                <li class="nav-item" data-section="status">
+                    <span class="nav-icon">&#9881;</span>
+                    <span class="nav-label">Status</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <p class="footer-text">Powered by Multi-Agent AI</p>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Chat Section -->
+            <section id="section-chat" class="content-section active">
+                <div class="section-header">
+                    <h1>AI Chat</h1>
+                    <p class="section-desc">Converse with J.A.R.V.I.S</p>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message assistant">
+                            <div class="message-avatar">J</div>
+                            <div class="message-content">
+                                <p>Hello! I'm J.A.R.V.I.S, your AI assistant. How can I help you today?</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="typing-indicator" id="typing-indicator" style="display:none;">
+                            <span></span><span></span><span></span>
+                            <em>J.A.R.V.I.S is thinking...</em>
+                        </div>
+                        <form id="chat-form" class="chat-form">
+                            <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off">
+                            <button type="submit" class="btn-send">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks Section -->
+            <section id="section-tasks" class="content-section">
+                <div class="section-header">
+                    <h1>Tasks</h1>
+                    <p class="section-desc">Manage your tasks and to-dos</p>
+                </div>
+                <div class="tasks-toolbar">
+                    <div class="filter-group">
+                        <select id="task-filter-status" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <select id="task-filter-category" class="filter-select">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <button id="btn-add-task" class="btn-primary">+ New Task</button>
+                </div>
+                <!-- Task Create Form (hidden by default) -->
+                <div id="task-form-container" class="form-container" style="display:none;">
+                    <form id="task-form" class="card-form">
+                        <input type="text" id="task-title" placeholder="Task title" required>
+                        <textarea id="task-description" placeholder="Description (optional)" rows="2"></textarea>
+                        <div class="form-row">
+                            <select id="task-priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                            <input type="text" id="task-category" placeholder="Category">
+                            <input type="datetime-local" id="task-due-date">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Create Task</button>
+                            <button type="button" class="btn-secondary" onclick="toggleTaskForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="tasks-list" class="items-list">
+                    <div class="loading">Loading tasks...</div>
+                </div>
+            </section>
+
+            <!-- Knowledge Section -->
+            <section id="section-knowledge" class="content-section">
+                <div class="section-header">
+                    <h1>Knowledge Base</h1>
+                    <p class="section-desc">Your personal knowledge repository</p>
+                </div>
+                <div class="knowledge-toolbar">
+                    <div class="search-bar">
+                        <input type="text" id="knowledge-search" placeholder="Search knowledge..." class="search-input">
+                        <button id="btn-search-knowledge" class="btn-primary">Search</button>
+                    </div>
+                    <button id="btn-add-knowledge" class="btn-primary">+ Add Knowledge</button>
+                </div>
+                <!-- Knowledge Create Form -->
+                <div id="knowledge-form-container" class="form-container" style="display:none;">
+                    <form id="knowledge-form" class="card-form">
+                        <input type="text" id="knowledge-title" placeholder="Title" required>
+                        <textarea id="knowledge-content" placeholder="Content" rows="4" required></textarea>
+                        <div class="form-row">
+                            <input type="text" id="knowledge-category" placeholder="Category">
+                            <input type="text" id="knowledge-tags" placeholder="Tags (comma-separated)">
+                            <input type="text" id="knowledge-source" placeholder="Source URL">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Add Knowledge</button>
+                            <button type="button" class="btn-secondary" onclick="toggleKnowledgeForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="knowledge-list" class="items-list">
+                    <div class="loading">Loading knowledge...</div>
+                </div>
+            </section>
+
+            <!-- Journal Section -->
+            <section id="section-journal" class="content-section">
+                <div class="section-header">
+                    <h1>Journal</h1>
+                    <p class="section-desc">Daily reflections and thoughts</p>
+                </div>
+                <div class="journal-form-area">
+                    <form id="journal-form" class="card-form">
+                        <div class="form-row">
+                            <input type="date" id="journal-date" required>
+                            <select id="journal-mood">
+                                <option value="">Select Mood</option>
+                                <option value="great">Great</option>
+                                <option value="good">Good</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="bad">Bad</option>
+                                <option value="terrible">Terrible</option>
+                            </select>
+                        </div>
+                        <textarea id="journal-content" placeholder="How was your day?" rows="4" required></textarea>
+                        <textarea id="journal-highlights" placeholder="Highlights (optional)" rows="2"></textarea>
+                        <textarea id="journal-challenges" placeholder="Challenges (optional)" rows="2"></textarea>
+                        <textarea id="journal-tomorrow" placeholder="Plan for tomorrow (optional)" rows="2"></textarea>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Save Journal Entry</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="journals-list" class="items-list">
+                    <div class="loading">Loading journals...</div>
+                </div>
+            </section>
+
+            <!-- Habits Section -->
+            <section id="section-habits" class="content-section">
+                <div class="section-header">
+                    <h1>Habits</h1>
+                    <p class="section-desc">Track your daily habits</p>
+                </div>
+                <div class="habits-toolbar">
+                    <button id="btn-add-habit" class="btn-primary">+ New Habit</button>
+                </div>
+                <!-- Habit Create Form -->
+                <div id="habit-form-container" class="form-container" style="display:none;">
+                    <form id="habit-form" class="card-form">
+                        <input type="text" id="habit-name" placeholder="Habit name" required>
+                        <div class="form-row">
+                            <select id="habit-frequency">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                            <input type="number" id="habit-target" value="1" min="1" placeholder="Target count">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Create Habit</button>
+                            <button type="button" class="btn-secondary" onclick="toggleHabitForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="habits-list" class="items-list">
+                    <div class="loading">Loading habits...</div>
+                </div>
+            </section>
+
+            <!-- Status Section -->
+            <section id="section-status" class="content-section">
+                <div class="section-header">
+                    <h1>System Status</h1>
+                    <p class="section-desc">J.A.R.V.I.S health and diagnostics</p>
+                </div>
+                <div id="status-panel" class="status-grid">
+                    <div class="loading">Loading status...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
