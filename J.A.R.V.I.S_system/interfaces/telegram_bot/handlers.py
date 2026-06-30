@@ -1,16 +1,20 @@
 """
 Telegram Bot Handlers for J.A.R.V.I.S.
 
-Implements all command handlers and the default text message handler.
+Implements all command handlers, callback query handler for inline keyboards,
+and the default text message handler.
 Security: Only responds to users listed in TELEGRAM_ALLOWED_USERS env var.
 Messages exceeding Telegram's 4096 char limit are split automatically.
+Responses use HTML parse mode with proper escaping.
 """
 
+import html
 import logging
 import os
+import re
 from typing import List, Set
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
@@ -140,6 +144,54 @@ async def _send_long_message(
             await update.message.reply_text(chunk)
 
 
+def format_response_html(text: str) -> str:
+    """Format J.A.R.V.I.S response for Telegram HTML mode.
+
+    - Escape HTML entities in regular text first
+    - Convert markdown code blocks (```) to <code>
+    - Convert inline code (`...`) to <code>
+    - Convert **bold** to <b>
+    - Convert *italic* to <i>
+    - Truncate if over 4096 chars (leaving room for metadata)
+
+    Args:
+        text: Raw response text from the orchestrator.
+
+    Returns:
+        HTML-formatted string safe for Telegram.
+    """
+    if not text:
+        return ""
+
+    # First escape all HTML entities
+    escaped = html.escape(text)
+
+    # Convert markdown triple-backtick code blocks to <code>
+    # Pattern: ```...``` (possibly with language hint on first line)
+    escaped = re.sub(
+        r'```(?:\w+)?\n?(.*?)```',
+        r'<code>\1</code>',
+        escaped,
+        flags=re.DOTALL,
+    )
+
+    # Convert inline backtick code to <code>
+    escaped = re.sub(r'`([^`]+)`', r'<code>\1</code>', escaped)
+
+    # Convert **bold** to <b>
+    escaped = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', escaped)
+
+    # Convert *italic* to <i> (but not inside already-processed bold)
+    escaped = re.sub(r'(?<!\*)\*([^*]+?)\*(?!\*)', r'<i>\1</i>', escaped)
+
+    # Truncate if over the limit (leave room for possible metadata)
+    max_len = MAX_MESSAGE_LENGTH - 100
+    if len(escaped) > max_len:
+        escaped = escaped[:max_len] + "\n\n<i>[truncated]</i>"
+
+    return escaped
+
+
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command - Welcome message.
 
@@ -245,7 +297,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /tasks command - List today's tasks.
+    """Handle /tasks command - List today's tasks with inline action buttons.
 
     Args:
         update: The Telegram update object.
@@ -265,7 +317,9 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         if not result.get("success"):
             await update.message.reply_text(
-                f"Could not fetch tasks: {result.get('error', 'Unknown error')}"
+                "Could not fetch tasks: {}".format(
+                    html.escape(result.get("error", "Unknown error"))
+                )
             )
             return
 
@@ -273,17 +327,48 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         date_str = result.get("date", "today")
 
         if not tasks:
-            await update.message.reply_text(f"No tasks scheduled for {date_str}.")
+            await update.message.reply_text(
+                "<b>No tasks scheduled for {}</b>".format(html.escape(date_str)),
+                parse_mode="HTML",
+            )
             return
 
-        lines = [f"Tasks for {date_str}:\n"]
-        for i, task in enumerate(tasks, 1):
+        # Send header
+        await update.message.reply_text(
+            "<b>Tasks for {}</b>".format(html.escape(date_str)),
+            parse_mode="HTML",
+        )
+
+        # Send each task with inline keyboard buttons
+        for task in tasks:
             priority = task.get("priority", "medium")
             status = task.get("status", "pending")
             title = task.get("title", "Untitled")
-            lines.append(f"{i}. [{priority.upper()}] {title} ({status})")
+            task_id = task.get("id", 0)
 
-        await _send_long_message(update, "\n".join(lines))
+            task_text = "<b>{}</b>\nPriority: {}\nStatus: {}".format(
+                html.escape(title),
+                html.escape(priority.upper()),
+                html.escape(status),
+            )
+
+            # Add inline keyboard only for non-completed tasks
+            if status != "completed":
+                keyboard = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton(
+                            "Complete", callback_data="complete_task_{}".format(task_id)
+                        ),
+                        InlineKeyboardButton(
+                            "Snooze", callback_data="snooze_task_{}".format(task_id)
+                        ),
+                    ]
+                ])
+                await update.message.reply_text(
+                    task_text, parse_mode="HTML", reply_markup=keyboard
+                )
+            else:
+                await update.message.reply_text(task_text, parse_mode="HTML")
 
     except ImportError:
         await update.message.reply_text(
@@ -291,7 +376,9 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
     except Exception as e:
         logger.error("Error listing tasks: %s", str(e))
-        await update.message.reply_text(f"Error listing tasks: {str(e)}")
+        await update.message.reply_text(
+            "Error listing tasks: {}".format(html.escape(str(e)))
+        )
 
 
 async def addtask_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -423,7 +510,8 @@ async def search_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle all non-command text messages.
 
-    Routes the message through the orchestrator and returns the response.
+    Routes the message through the orchestrator and returns the response
+    with HTML formatting and action inline keyboards.
 
     Args:
         update: The Telegram update object.
@@ -457,14 +545,127 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         provider = result.get("provider", "?")
         model = result.get("model", "?")
 
-        # Add metadata footer
-        meta = f"\n\n[{provider}/{model} | {task_type}]"
-        full_response = response + meta
+        # Format response with HTML
+        formatted = format_response_html(response)
 
-        await _send_long_message(update, full_response)
+        # Add metadata footer
+        meta = "\n\n<i>[{}/{} | {}]</i>".format(
+            html.escape(provider), html.escape(model), html.escape(task_type)
+        )
+        full_response = formatted + meta
+
+        # Add follow-up action buttons
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Follow-up", callback_data="followup"),
+                InlineKeyboardButton("New Topic", callback_data="newtopic"),
+            ]
+        ])
+
+        # Split and send if needed
+        chunks = _split_message(full_response)
+        for i, chunk in enumerate(chunks):
+            try:
+                # Only add keyboard to last chunk
+                markup = keyboard if i == len(chunks) - 1 else None
+                await update.message.reply_text(
+                    chunk, parse_mode="HTML", reply_markup=markup
+                )
+            except Exception:
+                # Fallback without HTML if formatting fails
+                await update.message.reply_text(chunk)
 
     except Exception as e:
         logger.error("Error processing message: %s", str(e))
         await update.message.reply_text(
-            f"Sorry, an error occurred while processing your message: {str(e)}"
+            "Sorry, an error occurred while processing your message. "
+            "Please try again."
         )
+
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle callback queries from inline keyboard buttons.
+
+    Supports:
+    - followup: Prompt user for a follow-up question
+    - newtopic: Clear context and start fresh
+    - complete_task_<id>: Mark a task as completed
+    - snooze_task_<id>: Acknowledge snooze (informational)
+
+    Args:
+        update: The Telegram update object containing callback_query.
+        context: The callback context.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    user_id = query.from_user.id
+    if not _is_authorized(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+
+    data = query.data
+
+    if data == "followup":
+        # Remove the inline keyboard and prompt for follow-up
+        await query.edit_message_reply_markup(reply_markup=None)
+        await query.message.reply_text(
+            "Send your follow-up question and I'll continue from where we left off."
+        )
+
+    elif data == "newtopic":
+        # Clear context - remove keyboard and inform user
+        await query.edit_message_reply_markup(reply_markup=None)
+        orchestrator = context.bot_data.get("orchestrator")
+        if orchestrator and hasattr(orchestrator, "memory"):
+            try:
+                orchestrator.memory.clear()
+            except Exception:
+                pass
+        await query.message.reply_text(
+            "Context cleared. Starting fresh - send me a new message!"
+        )
+
+    elif data.startswith("complete_task_"):
+        # Mark task as completed
+        try:
+            task_id_str = data.split("_")[-1]
+            task_id = int(task_id_str)
+
+            from core.tools.scheduler_tools import update_task_status
+
+            result = update_task_status(task_id=task_id, status="completed")
+
+            if result.get("success"):
+                await query.edit_message_reply_markup(reply_markup=None)
+                await query.message.reply_text(
+                    "Task #{} marked as completed!".format(task_id)
+                )
+            else:
+                await query.message.reply_text(
+                    "Could not complete task: {}".format(
+                        result.get("error", "Unknown error")
+                    )
+                )
+        except ImportError:
+            await query.message.reply_text(
+                "Task system not available."
+            )
+        except (ValueError, IndexError):
+            await query.message.reply_text("Invalid task ID.")
+        except Exception as e:
+            logger.error("Error completing task via callback: %s", str(e))
+            await query.message.reply_text(
+                "Error completing task. Please try again."
+            )
+
+    elif data.startswith("snooze_task_"):
+        # Acknowledge snooze request
+        await query.edit_message_reply_markup(reply_markup=None)
+        await query.message.reply_text(
+            "Task snoozed. I'll remind you again later."
+        )
+
+    else:
+        # Unknown callback data
+        logger.warning("Unknown callback data: %s", data)

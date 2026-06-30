@@ -99,6 +99,215 @@
     }
 
     // ============================================
+    // API Fetch with Retry (Exponential Backoff)
+    // ============================================
+
+    /**
+     * Wrapper around apiFetch that retries on failure with exponential backoff.
+     *
+     * @param {string} endpoint - API endpoint path.
+     * @param {object} options - Fetch options.
+     * @param {number} retries - Max number of retries (default: 2).
+     * @returns {Promise<object>} Parsed JSON response data.
+     */
+    async function apiFetchWithRetry(endpoint, options, retries) {
+        if (options === undefined) options = {};
+        if (retries === undefined) retries = 2;
+
+        for (var i = 0; i <= retries; i++) {
+            try {
+                var data = await apiFetch(endpoint, options);
+                return data;
+            } catch (e) {
+                if (i === retries) throw e;
+                // Exponential backoff: 1s, 2s, ...
+                await new Promise(function (r) { setTimeout(r, 1000 * (i + 1)); });
+            }
+        }
+    }
+
+    // ============================================
+    // Toast Notifications
+    // ============================================
+
+    /**
+     * Show a toast notification at top-right that auto-dismisses after 5s.
+     *
+     * @param {string} message - The toast message text.
+     * @param {string} type - One of 'error', 'success', 'warning'.
+     */
+    function showToast(message, type) {
+        if (!type) type = 'error';
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+
+        var msgSpan = document.createElement('span');
+        msgSpan.textContent = message;
+        toast.appendChild(msgSpan);
+
+        var dismissBtn = document.createElement('button');
+        dismissBtn.className = 'toast-dismiss';
+        dismissBtn.textContent = '\u00D7';
+        dismissBtn.addEventListener('click', function () {
+            dismissToast(toast);
+        });
+        toast.appendChild(dismissBtn);
+
+        container.appendChild(toast);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(function () {
+            dismissToast(toast);
+        }, 5000);
+    }
+
+    function dismissToast(toast) {
+        if (!toast || !toast.parentNode) return;
+        toast.classList.add('toast-exit');
+        setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }
+
+    // ============================================
+    // Connection Monitoring
+    // ============================================
+
+    var _connectionOnline = true;
+    var _connectionCheckInterval = null;
+
+    /**
+     * Start periodic connection checks by pinging /api/status.
+     * Shows offline banner when disconnected.
+     */
+    function startConnectionMonitor() {
+        _connectionCheckInterval = setInterval(async function () {
+            try {
+                var response = await fetch(API_BASE + '/status', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + authToken },
+                });
+                if (response.ok || response.status === 401) {
+                    if (!_connectionOnline) {
+                        _connectionOnline = true;
+                        hideOfflineBanner();
+                        showToast('Connection restored', 'success');
+                    }
+                } else {
+                    setOffline();
+                }
+            } catch (e) {
+                setOffline();
+            }
+        }, 30000); // Check every 30 seconds
+    }
+
+    function setOffline() {
+        if (_connectionOnline) {
+            _connectionOnline = false;
+            showOfflineBanner();
+        }
+    }
+
+    function showOfflineBanner() {
+        var banner = document.getElementById('offline-banner');
+        if (banner) banner.classList.add('visible');
+    }
+
+    function hideOfflineBanner() {
+        var banner = document.getElementById('offline-banner');
+        if (banner) banner.classList.remove('visible');
+    }
+
+    // Start connection monitoring
+    startConnectionMonitor();
+
+    // ============================================
+    // Loading Skeletons
+    // ============================================
+
+    /**
+     * Generate HTML for skeleton loading placeholders.
+     *
+     * @param {number} count - Number of skeleton cards to show.
+     * @returns {string} HTML for skeleton loading state.
+     */
+    function renderSkeletonLoading(count) {
+        if (!count) count = 3;
+        var html = '';
+        for (var i = 0; i < count; i++) {
+            html += '<div class="skeleton-card">';
+            html += '<div class="skeleton skeleton-line skeleton-line-medium"></div>';
+            html += '<div class="skeleton skeleton-line skeleton-line-full"></div>';
+            html += '<div class="skeleton skeleton-line skeleton-line-short"></div>';
+            html += '</div>';
+        }
+        return html;
+    }
+
+    // ============================================
+    // Keyboard Shortcuts
+    // ============================================
+
+    document.addEventListener('keydown', function (e) {
+        // Ctrl+K: Focus chat input
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            var chatInputEl = document.getElementById('chat-input');
+            if (chatInputEl) chatInputEl.focus();
+            // Also navigate to chat section
+            navigateTo('chat');
+        }
+
+        // Escape: Close modals and shortcuts hint
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
+
+        // Ctrl+Enter: Send message (only if chat input is focused)
+        if (e.ctrlKey && e.key === 'Enter') {
+            var activeEl = document.activeElement;
+            var chatInputEl2 = document.getElementById('chat-input');
+            if (activeEl === chatInputEl2 && chatInputEl2.value.trim()) {
+                e.preventDefault();
+                var chatFormEl = document.getElementById('chat-form');
+                if (chatFormEl) {
+                    chatFormEl.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        }
+
+        // ? key: Toggle shortcuts hint (only if not typing in an input)
+        if (e.key === '?' && !isTypingInInput()) {
+            toggleShortcutsHint();
+        }
+    });
+
+    function isTypingInInput() {
+        var active = document.activeElement;
+        if (!active) return false;
+        var tag = active.tagName.toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select';
+    }
+
+    function closeAllModals() {
+        // Close login modal
+        hideLoginModal();
+        // Close shortcuts hint
+        var hint = document.getElementById('shortcuts-hint');
+        if (hint) hint.style.display = 'none';
+    }
+
+    function toggleShortcutsHint() {
+        var hint = document.getElementById('shortcuts-hint');
+        if (!hint) return;
+        hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ============================================
     // Router - Section Navigation
     // ============================================
 
@@ -170,6 +379,7 @@
     var chatInput = document.getElementById('chat-input');
     var chatMessages = document.getElementById('chat-messages');
     var typingIndicator = document.getElementById('typing-indicator');
+    var _lastSentMessage = '';
 
     /**
      * Send a message using streaming SSE endpoint.
@@ -179,6 +389,9 @@
      * @param {string} message - The user message to send.
      */
     async function sendMessageStreaming(message) {
+        // Track last sent message for retry
+        _lastSentMessage = message;
+
         // Add user message
         appendMessage('user', message);
         chatInput.value = '';
@@ -272,7 +485,9 @@
 
                 appendMessage('assistant', data.response, meta);
             } catch (fallbackError) {
-                appendMessage('assistant', 'Error: ' + fallbackError.message);
+                // Show error bubble with retry button
+                appendErrorMessage('Failed to send message: ' + fallbackError.message);
+                showToast('Message failed. Click Retry to try again.', 'error');
             }
         }
     }
@@ -342,6 +557,38 @@
         scrollChatToBottom();
     }
 
+    /**
+     * Append an error message with a retry button in the chat.
+     *
+     * @param {string} errorText - The error message to display.
+     */
+    function appendErrorMessage(errorText) {
+        var div = document.createElement('div');
+        div.className = 'message error';
+
+        var html = '<div class="message-avatar">!</div>';
+        html += '<div class="message-content">';
+        html += '<p>' + escapeHtml(errorText) + '</p>';
+        html += '<button class="btn-retry">Retry</button>';
+        html += '</div>';
+
+        div.innerHTML = html;
+        chatMessages.appendChild(div);
+
+        // Attach retry handler
+        var retryBtn = div.querySelector('.btn-retry');
+        retryBtn.addEventListener('click', function () {
+            // Remove the error message
+            if (div.parentNode) div.parentNode.removeChild(div);
+            // Re-send the last message
+            if (_lastSentMessage) {
+                sendMessageStreaming(_lastSentMessage);
+            }
+        });
+
+        scrollChatToBottom();
+    }
+
     function scrollChatToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -379,9 +626,10 @@
             });
             taskForm.reset();
             toggleTaskForm();
+            showToast('Task created!', 'success');
             loadTasks();
         } catch (error) {
-            alert('Error creating task: ' + error.message);
+            showToast('Error creating task: ' + error.message, 'error');
         }
     });
 
@@ -394,8 +642,11 @@
         if (status) query += '?status=' + encodeURIComponent(status);
         if (category) query += (query ? '&' : '?') + 'category=' + encodeURIComponent(category);
 
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
         try {
-            var data = await apiFetch('/tasks' + query);
+            var data = await apiFetchWithRetry('/tasks' + query);
             var tasks = data.tasks || [];
 
             if (tasks.length === 0) {
@@ -422,6 +673,7 @@
             });
         } catch (error) {
             container.innerHTML = '<div class="empty-state"><p>Error loading tasks: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load tasks', 'error');
         }
     }
 
@@ -454,9 +706,10 @@
                 method: 'PUT',
                 body: JSON.stringify({ status: 'completed' }),
             });
+            showToast('Task completed!', 'success');
             loadTasks();
         } catch (error) {
-            alert('Error completing task: ' + error.message);
+            showToast('Error completing task: ' + error.message, 'error');
         }
     }
 
@@ -464,9 +717,10 @@
         if (!confirm('Delete this task?')) return;
         try {
             await apiFetch('/tasks/' + taskId, { method: 'DELETE' });
+            showToast('Task deleted', 'success');
             loadTasks();
         } catch (error) {
-            alert('Error deleting task: ' + error.message);
+            showToast('Error deleting task: ' + error.message, 'error');
         }
     }
 
@@ -505,9 +759,10 @@
             });
             knowledgeForm.reset();
             toggleKnowledgeForm();
+            showToast('Knowledge added!', 'success');
             loadKnowledge();
         } catch (error) {
-            alert('Error adding knowledge: ' + error.message);
+            showToast('Error adding knowledge: ' + error.message, 'error');
         }
     });
 
@@ -671,8 +926,12 @@
 
     async function loadKnowledge() {
         var container = document.getElementById('knowledge-list');
+
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
         try {
-            var data = await apiFetch('/knowledge');
+            var data = await apiFetchWithRetry('/knowledge');
             var items = data.knowledge || [];
 
             if (items.length === 0) {
@@ -687,6 +946,7 @@
             container.innerHTML = html;
         } catch (error) {
             container.innerHTML = '<div class="empty-state"><p>Error loading knowledge: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load knowledge base', 'error');
         }
     }
 
@@ -763,9 +1023,10 @@
             });
             journalForm.reset();
             document.getElementById('journal-date').value = new Date().toISOString().split('T')[0];
+            showToast('Journal entry saved!', 'success');
             loadJournals();
         } catch (error) {
-            alert('Error saving journal: ' + error.message);
+            showToast('Error saving journal: ' + error.message, 'error');
         }
     });
 
@@ -833,16 +1094,21 @@
             });
             habitForm.reset();
             toggleHabitForm();
+            showToast('Habit created!', 'success');
             loadHabits();
         } catch (error) {
-            alert('Error creating habit: ' + error.message);
+            showToast('Error creating habit: ' + error.message, 'error');
         }
     });
 
     async function loadHabits() {
         var container = document.getElementById('habits-list');
+
+        // Show skeleton loading
+        container.innerHTML = renderSkeletonLoading(3);
+
         try {
-            var data = await apiFetch('/habits');
+            var data = await apiFetchWithRetry('/habits');
             var habits = data.habits || [];
 
             if (habits.length === 0) {
@@ -864,6 +1130,7 @@
             });
         } catch (error) {
             container.innerHTML = '<div class="empty-state"><p>Error loading habits: ' + escapeHtml(error.message) + '</p></div>';
+            showToast('Failed to load habits', 'error');
         }
     }
 
@@ -910,9 +1177,10 @@
                 method: 'POST',
                 body: JSON.stringify({ count: 1 }),
             });
+            showToast('Habit logged!', 'success');
             loadHabits();
         } catch (error) {
-            alert('Error logging habit: ' + error.message);
+            showToast('Error logging habit: ' + error.message, 'error');
         }
     }
 

@@ -15,6 +15,7 @@ from typing import Optional
 
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     filters,
@@ -30,6 +31,7 @@ from interfaces.telegram_bot.handlers import (
     journal_handler,
     search_handler,
     message_handler,
+    button_callback,
     initialize_allowed_users,
 )
 
@@ -73,7 +75,7 @@ class TelegramBot:
         logger.info("TelegramBot initialized successfully.")
 
     def _register_handlers(self) -> None:
-        """Register all command and message handlers."""
+        """Register all command, callback, and message handlers."""
         # Command handlers
         self.application.add_handler(CommandHandler("start", start_handler))
         self.application.add_handler(CommandHandler("help", help_handler))
@@ -82,6 +84,9 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("addtask", addtask_handler))
         self.application.add_handler(CommandHandler("journal", journal_handler))
         self.application.add_handler(CommandHandler("search", search_handler))
+
+        # Callback query handler for inline keyboard buttons
+        self.application.add_handler(CallbackQueryHandler(button_callback))
 
         # Default message handler (must be last)
         self.application.add_handler(
